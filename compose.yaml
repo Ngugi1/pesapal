@@ -1,0 +1,27 @@
+services:
+  server:
+    depends_on:
+      db:
+        condition: service_healthy
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    env_file:
+      - ./.env
+  db:
+    container_name: pesapal-db-container
+    image: mysql
+    restart: always
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE} 
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_ROOT_HOST: '%' # Allow root user to connect from any IP address (usually root is restricted to local host) - form Gemini prompting
+      # See https://hub.docker.com/_/mysql
+    healthcheck: # This section was assembled using gemini prompts
+      # Tests if the DB is actually ready to receive queries
+      test: ["CMD", "mysqladmin", "ping", "-h", "db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+      
