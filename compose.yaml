@@ -19,9 +19,11 @@ services:
       # See https://hub.docker.com/_/mysql
     healthcheck: # This section was assembled using gemini prompts
       # Tests if the DB is actually ready to receive queries
-      test: ["CMD", "mysqladmin", "ping", "-h", "db"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 20s
+    volumes:
+      - ${PWD}/docker-entrypoint-initdb.d/init.sql:/docker-entrypoint-initdb.d/init.sql # init the database
       
