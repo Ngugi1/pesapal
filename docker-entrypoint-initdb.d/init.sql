@@ -1,8 +1,8 @@
 USE pesapaldb;
-CREATE TABLE User(id INT PRIMARY KEY AUTO_INCREMENT, 
+CREATE TABLE User(id INT PRIMARY KEY AUTO_INCREMENT, -- auto -indexed
                     fname VARCHAR(100) NOT NULL, 
                     lname VARCHAR(100) NOT NULL, 
-                    phone VARCHAR(25) NOT NULL UNIQUE,
+                    phone VARCHAR(25) NOT NULL UNIQUE, -- auto indexed
                     deleted BOOLEAN NOT NULL DEFAULT FALSE, 
                     date_created BIGINT NOT NULL DEFAULT (UNIX_TIMESTAMP()), 
                     date_updated BIGINT NOT NULL DEFAULT (date_created), 
@@ -16,7 +16,8 @@ CREATE TABLE Shop(id INT PRIMARY KEY AUTO_INCREMENT,
                     date_updated BIGINT NOT NULL DEFAULT (date_created), 
                     date_deleted BIGINT NOT NULL DEFAULT -1, 
                     deleted BOOLEAN NOT NULL DEFAULT FALSE,
-                    FOREIGN KEY (shop_owner) REFERENCES User(id));
+                    FOREIGN KEY (shop_owner) REFERENCES User(id)
+                    );
 DESC Shop;
 
 -- Schema for products ---- 
@@ -31,7 +32,11 @@ CREATE TABLE Catalog(id INT PRIMARY KEY AUTO_INCREMENT,
                         shop_id INT NOT NULL, 
                         product_id INT NOT NULL,
                         FOREIGN KEY (shop_id) REFERENCES Shop(id),
-                        FOREIGN KEY (product_id) REFERENCES Product(id));
+                        FOREIGN KEY (product_id) REFERENCES Product(id),
+                        INDEX idx_shop_product_ids (shop_id, product_id), -- composite index
+                        INDEX idx_shop_id (shop_id),
+                        INDEX idx_product_id (product_id)
+                        );
 DESC Catalog;
 -- To extend credit to users, make schema for debt table --- 
 CREATE TABLE Debt(id INT PRIMARY KEY AUTO_INCREMENT, 
@@ -46,7 +51,11 @@ CREATE TABLE Debt(id INT PRIMARY KEY AUTO_INCREMENT,
                     date_forgiven BIGINT NOT NULL  DEFAULT -1,
                     FOREIGN KEY (product_id) REFERENCES Product(id),
                     FOREIGN KEY (debtor_user_id) REFERENCES User(id),
-                    FOREIGN KEY (creditor_shop_id) REFERENCES Shop(id));
+                    FOREIGN KEY (creditor_shop_id) REFERENCES Shop(id),
+                    INDEX idx_forgiven_creditor_shop_id (forgiven, creditor_shop_id),
+                    INDEX idx_creditor_shop_id (creditor_shop_id),
+                    INDEX idx_product_id (product_id),
+                    INDEX idx_debtor_user_id (debtor_user_id));
 DESC Debt;
 -- Record when users pay their debts ---
 CREATE TABLE Settlement(id INT PRIMARY KEY AUTO_INCREMENT, 
@@ -120,6 +129,8 @@ WHERE
 GROUP BY 
         d.creditor_shop_id, 
         s.sname,
+        u.fname,
+        u.lname,
         u.phone;
 
 
@@ -143,14 +154,14 @@ INNER JOIN User u ON
 
 -- Lets give a history of debts that have already been paid for a given shop
 SELECT
-    s.sname as shop,
     CONCAT(u.fname, ' ', u.lname) AS debtor,
     u.phone AS debtor_phone,
     p.pname as product,
     d.quantity,
     d.unit_price,
     d.quantity * d.unit_price AS total,
-    stlmt.settlement_date
+    stlmt.settlement_date,
+    stlmt.is_full_settlement
 FROM Shop s 
 INNER JOIN Debt d ON 
     s.id = d.creditor_shop_id
@@ -160,7 +171,8 @@ INNER JOIN Settlement stlmt ON
     stlmt.id = d.id
 INNER JOIN User u ON 
     u.id = d.debtor_user_id
-WHERE stlmt.is_full_settlement = TRUE AND d.forgiven = FALSE;
+WHERE 
+    d.forgiven = FALSE;
 
 -- Lets display the catalog of a shop 
 SELECT  p.pname,
