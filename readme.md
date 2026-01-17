@@ -2,6 +2,7 @@
 - This project **requires** that [docker desktop](https://www.docker.com/) and [docker-compose](https://docs.docker.com/compose/) be installed on your computer.
 
 ## Set Up Environment Variables
+!! IMPORTANT !!
 - Make a file named `.env` in the root folder of the projects and populate it with the following values (this is not standard practice but it is easy for such test projects):
 MYSQL_DATABASE=pesapaldb
 MYSQL_ROOT_PASSWORD=example
@@ -18,6 +19,18 @@ MYSQL_HOST=db
     - Create a database using command `CREATE DATABASE pesapaldb;`
     - Select the newly created database using command `USE pesapaldb;`
     - The database commands can be found in `docker-entrypoint-initdb.d/init.sql`
+
+## Accessing the server
+- Server url: localhost:3003/ 
+- The endpoints of the server can be tested independently via postman. 
+- The whole set of available endpoints is published [here](https://llms55.postman.co/workspace/LLMs~fdcf35b6-92d5-4b64-917e-f4b1678b3d0d/collection/931606-8f60028d-291f-4d71-8e95-b9fcdece8f86?action=share&creator=931606)
+- Alternatively, open `./server/server.js` to see the complete set of endpoints 
+
+## The front-end
+The visual web application can be accessed via link: http://localhost:5173/
+
+
+
 
 
 
