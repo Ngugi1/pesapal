@@ -22,7 +22,9 @@ module.exports.catalog = async function(connection, shop_id, res) {
         SELECT  
             p.pname,
             p.description,
-            s.sname
+            p.id as product_id,
+            s.id as shop_id,
+            c.id
         FROM Shop s 
         INNER JOIN Catalog c ON
             s.id = c.shop_id

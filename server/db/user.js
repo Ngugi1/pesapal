@@ -27,3 +27,13 @@ module.exports.create = async function(connection, user, res) {
    
 }
 
+module.exports.all = async function (connection, res) {
+    const [results] = await connection.query(`
+            SELECT phone, id, fname, lname FROM User
+        `, [])
+    if(results){
+        console.log("Users", results)
+        res.send(results)
+    }
+}
+

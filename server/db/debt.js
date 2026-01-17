@@ -33,7 +33,7 @@ module.exports.settle = async function(connection, debtId, res) {
 }
 
 module.exports.forgive = async function(connection, debtId, res) {
-    const results = await connection.query(
+    const [results] = await connection.query(
         `
             UPDATE Debt
             SET date_forgiven = UNIX_TIMESTAMP(), forgiven=TRUE
@@ -41,6 +41,35 @@ module.exports.forgive = async function(connection, debtId, res) {
         `,
         [debtId]
     )
+    if(results.changedRows) {
+        res.send()
+    }else{
+        res.status(400).end()
+    }
+   
+}
+
+module.exports.getAll = async function(connection, shopId, res) {
+    console.log(shopId, "}}}}}}}}}}}")
+    const [results] = await connection.query(
+        `
+            SELECT
+                d.id,
+                CONCAT(u.fname, ' ', u.lname) as debtor,
+                p.pname,
+                d.quantity,
+                d.unit_price,
+                d.total_price
+            FROM Debt d
+            INNER JOIN User u ON 
+                u.id = debtor_user_id
+            INNER JOIN Product p ON 
+                p.id = product_id
+            WHERE d.creditor_shop_id = ? AND d.forgiven=FALSE;
+        `,
+        [shopId]
+    )
     console.log(results)
     res.send(results)
+
 }

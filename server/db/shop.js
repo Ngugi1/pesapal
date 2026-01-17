@@ -46,8 +46,9 @@ module.exports.profile = async function(connection, shop_id, res) {
                 u.lname,
                 u.phone;
         `,
-        [shop_id]
+        [parseInt(shop_id)]
     )
+    console.log('*************', rows)
     if(rows.length > 0) {
         res.json({id: shop_id, ...rows[0]})
     }else {

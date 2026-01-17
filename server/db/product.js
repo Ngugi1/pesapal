@@ -12,6 +12,14 @@ module.exports.create = async function(connection, product, res) {
     }else{
         res.send({error: "Product with same name already exists", code: ProductErrorCodes.PRODUCT_EXISTS})
     }
-    
-    
+}
+
+module.exports.getAll = async function(connection, res) {
+    const [result] = await connection.query(
+        `
+            SELECT * FROM Product
+        `, []
+    )
+    console.log(result)
+    res.send(result)
 }
