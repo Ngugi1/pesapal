@@ -1,3 +1,6 @@
+## About the App (the idea)
+Running a shop means trusting your neighbors, but keeping track of 'deni' shouldn't be a headache. My app is a digital ledger that sits right in your pocket. You can register your regular customers, record what they take on credit, and see exactly when they pay you back. If you decide to forgive a small debt, the app handles that too. It’s built to make sure you get paid on time and your records are always organized
+
 ## General Requirements
 - This project **requires** that [docker desktop](https://www.docker.com/) and [docker-compose](https://docs.docker.com/compose/) be installed on your computer.
 
@@ -28,6 +31,10 @@ MYSQL_HOST=db
 
 ## The front-end
 The visual web application can be accessed via link: http://localhost:5173/
+
+## Notes
+Please note that due to limited time, some areas of the app especially on the front-end were done in a hurry and thus the quality may not be as great.
+
 
 
 

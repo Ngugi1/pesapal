@@ -17,7 +17,7 @@ export function ShopDisplay() {
         unit_price: -1
     })
     const [selectedProduct, setSelectedProduct] = useState(-1)
-    const [selected, setSelected] = useState(-1) // default fetch debts
+    const [selected, setSelected] = useState(1) // default fetch debts
     console.log(state)
     useEffect(() => {
         if(selected === 0) {
@@ -118,6 +118,8 @@ export function ShopDisplay() {
               <div>
             <button onClick={(e) => setSelected(1)}>Catalog</button>
             <button onClick={(e) => setSelected(0)}>Debts</button>
+            <p style={{color: 'red'}}>Please refresh to see changes after every operation</p>
+            <p style={{color: 'red'}}>Also notice, selecting the first option in dropdown is not registered - try choosing non-first item in dropdown</p>
 
         </div>
         </div>

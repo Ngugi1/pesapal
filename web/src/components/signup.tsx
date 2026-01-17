@@ -40,7 +40,18 @@ export function SignUp() {
    
      
     return <div>
-         <h1>Sign Up</h1>
+        <p>About: Running a shop means trusting your neighbors, but keeping track of 'deni' shouldn't be a headache. My app is a digital ledger that sits right in your pocket. You can register your regular customers, record what they take on credit, and see exactly when they pay you back. If you decide to forgive a small debt, the app handles that too. It’s built to make sure you get paid on time and your records are always organized</p>
+        
+        <div>
+            <h3>You will be guided through the following steps</h3>
+            <ul style={{alignContent: 'flex-start'}}>
+                <li>Sign Up</li>
+                <li>Make a Dummy Shop that is linked to your account (you are now deemed a shop owner)</li>
+                <li>Add items to your catalog (i.e., items you want to give on credit) - choose from products provided by the system</li>
+                <li>Lend Items to your customers. The system has a set of predefined ones - additional users can be created using postman/curl requests. Please ake sure you add several items to the catalog before attempting to give items on credid. This is because you can only lend whay you have in stock!</li>
+            </ul>
+        </div>
+        <h1>Sign Up</h1>
         <div>First Name</div>
         <input name="fname" type="text" placeholder="mike" onChange={handleChange} value={user.fname}/>
         <div>Last Name</div>
