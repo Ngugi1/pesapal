@@ -22,3 +22,37 @@ module.exports.create = async function(connection, shop, res) {
        
 }
 
+module.exports.profile = async function(connection, shop_id, res) {
+    console.log('shop id========================', shop_id)
+    const [rows, _] = await connection.query(
+        `
+        SELECT DISTINCT  
+        CONCAT(u.fname, ' ', u.lname) AS owner,
+        s.sname,
+        u.phone,
+        SUM(d.quantity * d.unit_price) AS total
+        FROM Shop s 
+        INNER JOIN Debt d ON 
+                d.creditor_shop_id = s.id
+        INNER JOIN User u ON
+                u.id = s.shop_owner
+        WHERE 
+            d.forgiven = FALSE AND
+            s.id = ?
+        GROUP BY 
+                d.creditor_shop_id, 
+                s.sname,
+                u.fname,
+                u.lname,
+                u.phone;
+        `,
+        [shop_id]
+    )
+    if(rows.length > 0) {
+        res.json({id: shop_id, ...rows[0]})
+    }else {
+        res.json({})
+    }
+}
+
+

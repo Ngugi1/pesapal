@@ -15,3 +15,39 @@ module.exports.create = async function(connection, catalog, res) {
         util.error(res, "Catalog item already exists", CatalogErrorCodes.CATALOG_EXISTS)
     }
 }
+
+module.exports.catalog = async function(connection, shop_id, res) {
+    const [rows] = await connection.query(
+        `
+        SELECT  
+            p.pname,
+            p.description,
+            s.sname
+        FROM Shop s 
+        INNER JOIN Catalog c ON
+            s.id = c.shop_id
+        INNER JOIN Product p ON
+            p.id = c.product_id
+        WHERE s.id = ?
+        `, 
+        [shop_id]
+    )
+    console.log(rows)
+    res.send(rows)
+}
+
+module.exports.remove = async function(connection, info, res) {
+    console.log(info)
+    const [header] = await connection.query(
+        `
+            DELETE FROM Catalog WHERE shop_id=? AND product_id=?;
+        `,
+        [parseInt(info.shopid), parseInt(info.productid)]
+    )
+    if(header.affectedRows) {
+        res.send({"message": "deleted"})
+    }else {
+        res.send({"message": "Item does't exist"})
+    }
+    
+}

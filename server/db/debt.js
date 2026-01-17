@@ -27,3 +27,20 @@ module.exports.create = async function(connection, debt, res) {
     }
    
 }
+
+module.exports.settle = async function(connection, debtId, res) {
+    
+}
+
+module.exports.forgive = async function(connection, debtId, res) {
+    const results = await connection.query(
+        `
+            UPDATE Debt
+            SET date_forgiven = UNIX_TIMESTAMP(), forgiven=TRUE
+            WHERE id = ?; 
+        `,
+        [debtId]
+    )
+    console.log(results)
+    res.send(results)
+}
