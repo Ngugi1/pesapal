@@ -1,5 +1,16 @@
 services:
-
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    ports:
+      - 5173:5173
+    depends_on: 
+      - server
+      - db
+    volumes:
+      - ./web:/app # for hot reload
+      - /app/node_modules
   server:
     ports:
       - 3003:3003
