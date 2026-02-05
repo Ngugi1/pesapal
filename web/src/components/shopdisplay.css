@@ -166,7 +166,7 @@
 
 .inline-form {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1.1fr)) minmax(90px, 0.7fr) minmax(140px, 0.9fr) auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) minmax(90px, 0.7fr) minmax(140px, 0.9fr) auto;
   gap: 18px;
   align-items: center;
 }
@@ -174,6 +174,31 @@
 .inline-form select,
 .inline-form input {
   height: 44px;
+}
+
+.panel-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 999px;
+  padding: 6px 12px;
+  min-width: 220px;
+}
+
+.panel-search svg {
+  width: 16px;
+  height: 16px;
+  fill: var(--muted);
+}
+
+.panel-search input {
+  border: none;
+  background: transparent;
+  outline: none;
+  width: 100%;
+  padding: 4px 0;
 }
 
 @media (max-width: 1100px) {
@@ -451,6 +476,14 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
+}
+
+.ghost-button.danger {
+  color: #b43a3a;
+  border-color: rgba(220, 88, 88, 0.55);
+  background: rgba(255, 230, 230, 0.6);
+  box-shadow: 0 10px 20px rgba(180, 58, 58, 0.18);
+  backdrop-filter: blur(10px);
 }
 
 .panel select:disabled,

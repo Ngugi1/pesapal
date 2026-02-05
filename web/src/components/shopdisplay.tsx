@@ -25,6 +25,11 @@ export function ShopDisplay() {
     const [settleAmount, setSettleAmount] = useState('')
     const [settleMode, setSettleMode] = useState('amount')
     const [settleQuantity, setSettleQuantity] = useState('')
+    const [newCustomer, setNewCustomer] = useState({ fname: '', lname: '', phone: '' })
+    const [customerStatus, setCustomerStatus] = useState('')
+    const [customers, setCustomers] = useState([])
+    const [customerQuery, setCustomerQuery] = useState('')
+    const [debtorQuery, setDebtorQuery] = useState('')
     const [debt, setDebt] = useState({
         creditor_shop_id: shop?.shop_id ?? shop?.id ?? null,
         debtor_user_id: -1,
@@ -133,6 +138,17 @@ export function ShopDisplay() {
         })
     }
 
+    function loadCustomers() {
+        if (!shopId) return
+        fetch('http://localhost:3003/shop/customer/list/'+shopId).then((res) => {
+            if (res.status === 200) {
+                res.json().then((data) => {
+                    setCustomers(data)
+                })
+            }
+        })
+    }
+
     function loadStats() {
         if (!shopId) return
         fetch('http://localhost:3003/debt/stats/'+shopId).then((res) => {
@@ -150,12 +166,12 @@ export function ShopDisplay() {
     useEffect(() => {
         if(selected === 0) {
             loadDebts()
-            loadUsers()
+            loadCustomers()
             loadStats()
         }else if (selected === 1) {
             loadProducts()
         }else if (selected === 2) {
-            loadDebts()
+            loadCustomers()
         }
     }, [selected, shopId])
 
@@ -178,13 +194,24 @@ export function ShopDisplay() {
     }, [catalog, debt.product_id])
 
     useEffect(() => {
-        if (users?.length && debt.debtor_user_id === -1) {
+        if (customers?.length && debt.debtor_user_id === -1) {
             setDebt((old) => ({
                 ...old,
-                debtor_user_id: users[0].id
+                debtor_user_id: customers[0].user_id
             }))
         }
-    }, [users, debt.debtor_user_id])
+    }, [customers, debt.debtor_user_id])
+
+    const filteredCustomers = customers.filter((u) => {
+        const q = customerQuery.trim().toLowerCase()
+        if (!q) return true
+        return `${u.fname} ${u.lname} ${u.phone}`.toLowerCase().includes(q)
+    })
+
+    const selectedCustomerLabel = (() => {
+        const match = customers.find((u) => u.user_id === debt.debtor_user_id)
+        return match ? `${match.fname} ${match.lname} · ${match.phone}` : ''
+    })()
 
     const filteredDebts = debts.filter((d) => {
         const hasSettlement = Number(d.has_settlement) > 0 || Number(d.total_paid) > 0
@@ -334,6 +361,57 @@ export function ShopDisplay() {
         })
     }
 
+    function addCustomer(e) {
+        e.preventDefault()
+        setCustomerStatus('')
+        if (!shopId) {
+            setCustomerStatus('Shop id missing')
+            return
+        }
+        if (!newCustomer.fname || !newCustomer.lname || !newCustomer.phone) {
+            setCustomerStatus('Fill all fields')
+            return
+        }
+        fetch('http://localhost:3003/user/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(newCustomer)
+        }).then(async (res) => {
+            const jsonData = await processResponse(res, 'Add customer failed', setCustomerStatus)
+            if (jsonData) {
+                fetch('http://localhost:3003/shop/customer/add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ shop_id: shopId, user_id: jsonData.id })
+                }).then(() => {
+                    setNewCustomer({ fname: '', lname: '', phone: '' })
+                    loadCustomers()
+                })
+            }
+        })
+    }
+
+    function removeCustomer(userId) {
+        if (!shopId) return
+        fetch('http://localhost:3003/shop/customer/remove', {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ shop_id: shopId, user_id: userId })
+        }).then((res) => {
+            if (res.status === 200) {
+                loadCustomers()
+            } else {
+                setCustomerStatus('Remove failed')
+            }
+        })
+    }
+
     const topBar =  (
         <div className="shop-header">
             <section className="region-card">
@@ -460,18 +538,33 @@ export function ShopDisplay() {
                             uniqueCatalog.map(c => <option key={c.product_id} value={c.product_id}>{c.pname}</option>)
                         }
                     </select>
-                    <select
-                        value={debt.debtor_user_id}
+                    <input
+                        list="customer-options"
+                        type="text"
+                        placeholder="Search customer"
+                        value={debtorQuery || selectedCustomerLabel}
                         disabled={catalogLoaded && catalog.length === 0}
                         onChange={(e) => {
-                        setDebt((old) => {
-                            return {...old, debtor_user_id: parseInt(e.target.value)}
-                        })
-                    }}>
-                        {
-                            users.map(u => <option key={u.id} value={u.id}>{u.fname + ' ' + u.lname + ' · ' + u.phone}</option>)
-                        }
-                    </select>
+                            const value = e.target.value
+                            setDebtorQuery(value)
+                            const match = customers.find((u) => `${u.fname} ${u.lname} · ${u.phone}` === value)
+                            if (match) {
+                                setDebt((old) => ({ ...old, debtor_user_id: match.user_id }))
+                            }
+                        }}
+                        onBlur={() => {
+                            if (!debtorQuery) return
+                            const match = customers.find((u) => `${u.fname} ${u.lname} · ${u.phone}` === debtorQuery)
+                            if (!match) {
+                                setDebtorQuery('')
+                            }
+                        }}
+                    />
+                    <datalist id="customer-options">
+                        {customers.map((u) => (
+                            <option key={u.user_id} value={`${u.fname} ${u.lname} · ${u.phone}`} />
+                        ))}
+                    </datalist>
                     <input
                         type="number"
                         min="1"
@@ -702,42 +795,74 @@ export function ShopDisplay() {
                                 <div className="item-title">{c.pname}</div>
                                 <div className="item-meta">{c.description}</div>
                             </div>
-                            <button className="ghost-button" onClick={(e) => removeCatalogItem(c)}>Remove</button>
+                            <button className="ghost-button danger" onClick={(e) => removeCatalogItem(c)}>Remove</button>
                         </div>
                     ))}
                 </div>
             </div>
         </div>
     }else if (selected === 2) {
-        const customersWithCredit = Array.from(
-            new Map(
-                debts
-                    .filter(d => d?.debtor)
-                    .map(d => {
-                        const key = d?.debtor_user_id ?? `${d.debtor}-${d.debtor_phone ?? ''}`
-                        return [key, d]
-                    })
-            ).values()
-        )
         return <div className="shop-page">
             {topBar}
+            <div className="debt-inline-zone">
+                <div className="inline-header">
+                    <div>
+                        <h2>Add customer</h2>
+                        <p className="page-subtitle">Hidden signup for new credit customers.</p>
+                    </div>
+                </div>
+                <form className="inline-form" onSubmit={addCustomer}>
+                    <input
+                        type="text"
+                        placeholder="First name"
+                        value={newCustomer.fname}
+                        onChange={(e) => setNewCustomer((old) => ({ ...old, fname: e.target.value }))}
+                    />
+                    <input
+                        type="text"
+                        placeholder="Last name"
+                        value={newCustomer.lname}
+                        onChange={(e) => setNewCustomer((old) => ({ ...old, lname: e.target.value }))}
+                    />
+                    <input
+                        type="tel"
+                        placeholder="Phone"
+                        value={newCustomer.phone}
+                        onChange={(e) => setNewCustomer((old) => ({ ...old, phone: e.target.value }))}
+                    />
+                    <button className="primary-button" type="submit">Add customer</button>
+                </form>
+                {customerStatus && <div className="status-text">{customerStatus}</div>}
+            </div>
             <div className="panel glass">
                 <div className="panel-header">
                     <div>
                         <h2>Customers</h2>
-                        <p className="page-subtitle">People who have taken items on credit.</p>
+                        <p className="page-subtitle">Customers registered to this shop.</p>
+                    </div>
+                    <div className="panel-search">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M15.5 14h-.8l-.3-.3a6.5 6.5 0 1 0-.7.7l.3.3v.8l4.8 4.8a1 1 0 0 0 1.4-1.4L15.5 14zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z" />
+                        </svg>
+                        <input
+                            type="text"
+                            placeholder="Search customers"
+                            value={customerQuery}
+                            onChange={(e) => setCustomerQuery(e.target.value)}
+                        />
                     </div>
                 </div>
                 <div className="panel-list">
-                    {customersWithCredit.length === 0 && (
-                        <div className="empty-state">No customers with credit yet.</div>
+                    {filteredCustomers.length === 0 && (
+                        <div className="empty-state">No customers yet.</div>
                     )}
-                    {customersWithCredit.map(u => (
-                        <div className="list-item" key={u.debtor_user_id ?? `${u.debtor}-${u.debtor_phone ?? ''}`}>
+                    {filteredCustomers.map(u => (
+                        <div className="list-item" key={u.user_id}>
                             <div>
-                                <div className="item-title">{u.debtor}</div>
-                                <div className="item-meta">{u.debtor_phone}</div>
+                                <div className="item-title">{u.fname} {u.lname}</div>
+                                <div className="item-meta">{u.phone}</div>
                             </div>
+                            <button className="ghost-button danger" onClick={() => removeCustomer(u.user_id)}>Remove</button>
                         </div>
                     ))}
                 </div>

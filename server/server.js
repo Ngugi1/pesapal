@@ -9,6 +9,7 @@ const product = require('./db/product')
 const catalog = require('./db/catalog')
 const debt = require('./db/debt')
 const settle = require('./db/settle')
+const shopCustomer = require('./db/shopCustomer')
 let dbConnection = connector()
 // Init server
 let app = express()
@@ -60,6 +61,16 @@ app.get('/shop/profile/:id', async (req, res) => {
 
 app.get('/shop/profile/settled/:id', async (req, res)=> {
     await settle.settled(dbConnection, req.params.id, res)
+})
+// Shop customers
+app.get('/shop/customer/list/:shop_id', async (req, res) => {
+    await shopCustomer.list(dbConnection, req.params.shop_id, res)
+})
+app.post('/shop/customer/add', async (req, res) => {
+    await shopCustomer.add(dbConnection, req.body, res)
+})
+app.delete('/shop/customer/remove', async (req, res) => {
+    await shopCustomer.remove(dbConnection, req.body, res)
 })
 
 // Create a product

@@ -65,6 +65,17 @@ CREATE TABLE Settlement(id INT PRIMARY KEY AUTO_INCREMENT,
                             is_full_settlement BOOLEAN NOT NULL,
                             comments TEXT NOT NULL);
 
+-- Link customers to shops ---
+CREATE TABLE ShopCustomer(
+                            id INT PRIMARY KEY AUTO_INCREMENT,
+                            shop_id INT NOT NULL,
+                            user_id INT NOT NULL,
+                            date_created BIGINT NOT NULL DEFAULT (UNIX_TIMESTAMP()),
+                            UNIQUE KEY uniq_shop_user (shop_id, user_id),
+                            FOREIGN KEY (shop_id) REFERENCES Shop(id),
+                            FOREIGN KEY (user_id) REFERENCES User(id)
+                        );
+
 
 
 -- Lets create some users
@@ -104,6 +115,13 @@ VALUES  (1, 1),
         (2, 2),
         (2, 3),
         (2, 4);
+
+-- Link existing users as customers for shops ---
+INSERT INTO ShopCustomer (shop_id, user_id)
+VALUES (1, 2),
+       (1, 3),
+       (2, 1),
+       (2, 3);
 -- Lets Settle some debts, partially and fully
 INSERT INTO Settlement(debt_id, amount, is_full_settlement, comments) 
 VALUES  (1, 20, TRUE, "Partial payment"),
@@ -191,8 +209,6 @@ WHERE id = 5; -- Parameterize this in nodejs
 
 -- Lets remove a catalog item that is no longer stocked by a shop
 DELETE FROM Catalog WHERE shop_id=1 AND product_id=2;
-
-
 
 
 
