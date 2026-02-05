@@ -92,6 +92,14 @@ app.get('/catalog/shop/:id', async (req, res) => {
 app.get('/debt/getall/:shop_id', async (req, res) => {
     await debt.getAll(dbConnection, req.params.shop_id, res)
 })
+// Debt stats
+app.get('/debt/stats/:shop_id', async (req, res) => {
+    await debt.stats(dbConnection, req.params.shop_id, res)
+})
+// Debt list (all statuses)
+app.get('/debt/list/:shop_id', async (req, res) => {
+    await debt.listAll(dbConnection, req.params.shop_id, res)
+})
 
 
 // Give debt
@@ -108,4 +116,3 @@ app.post('/debt/forgive/:id', async (req, res) => {
 app.put('/debt/settle', async (req, res) => {
     await settle.create(dbConnection, req.body, res)
 })
-

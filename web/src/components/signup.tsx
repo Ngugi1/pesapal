@@ -1,6 +1,8 @@
 import { useState } from "react"
 import {useNavigate} from 'react-router-dom'
 import { processResponse } from './util'
+import './signup.css'
+import shopHero from '../assets/shop-icon.png'
 // Tellesserver to register this user
 export function SignUp() {
     const navigate = useNavigate()
@@ -37,30 +39,110 @@ export function SignUp() {
             navigate('/makeshop',{ state: {...jsonData, ...user}, replace: true })
         }
     }
+
+    function showLogin() {
+        setStatus("Login will be available soon. For now, please sign up to continue.")
+    }
    
      
-    return <div>
-        <p>About: Running a shop means trusting your neighbors, but keeping track of 'deni' shouldn't be a headache. My app is a digital ledger that sits right in your pocket. You can register your regular customers, record what they take on credit, and see exactly when they pay you back. If you decide to forgive a small debt, the app handles that too. It’s built to make sure you get paid on time and your records are always organized</p>
-        
-        <div>
-            <h3>You will be guided through the following steps</h3>
-            <ul style={{alignContent: 'flex-start'}}>
-                <li>Sign Up</li>
-                <li>Make a Dummy Shop that is linked to your account (you are now deemed a shop owner)</li>
-                <li>Add items to your catalog (i.e., items you want to give on credit) - choose from products provided by the system</li>
-                <li>Lend Items to your customers. The system has a set of predefined ones - additional users can be created using postman/curl requests. Please ake sure you add several items to the catalog before attempting to give items on credid. This is because you can only lend whay you have in stock!</li>
-            </ul>
+    return (
+        <div className="signup-page">
+            <section className="signup-grid">
+                <div className="signup-hero">
+                <div>
+                    <div className="hero-eyebrow brand-line">
+                        <img className="brand-icon" src={shopHero} alt="Shop icon" />
+                        <span className="brand-name">Kitabu</span>
+                    </div>
+                    <h1 className="hero-title">Kitabu cha deni.</h1>
+                    <p className="hero-copy">
+                        Deni ni kawaida. Kitabu keeps it clean — note every regular, record each item taken on
+                        credit, and see who has paid, all without the paper mess.
+                    </p>
+                    <div className="hero-metrics">
+                        <div className="metric">
+                            <span className="metric-value">3 minutes</span>
+                            <span className="metric-label">to set up</span>
+                        </div>
+                        <div className="metric">
+                            <span className="metric-value">1 view</span>
+                            <span className="metric-label">all balances</span>
+                        </div>
+                        <div className="metric">
+                            <span className="metric-value">100%</span>
+                            <span className="metric-label">transparent</span>
+                        </div>
+                    </div>
+                </div>
+                <div className="steps-card">
+                    <h3>What happens next</h3>
+                    <ul className="steps-list">
+                        <li className="steps-item">
+                            <span className="step-badge">1</span>
+                            <span className="step-text">Sign up with your basic details.</span>
+                        </li>
+                        <li className="steps-item">
+                            <span className="step-badge">2</span>
+                            <span className="step-text">Create your shop so we can attach customers and items.</span>
+                        </li>
+                        <li className="steps-item">
+                            <span className="step-badge">3</span>
+                            <span className="step-text">Add catalog items before lending on credit.</span>
+                        </li>
+                    </ul>
+                </div>
+                </div>
+                <form className="signup-card" onSubmit={signUp}>
+                    <div>
+                        <h2>Sign up</h2>
+                        <p className="page-subtitle">Let’s get your ledger ready for daily use.</p>
+                    </div>
+                    <div className="form-grid">
+                        <label className="field-group">
+                            <span className="field-label">First name</span>
+                            <input
+                                className="field-input"
+                                name="fname"
+                                type="text"
+                                placeholder="Mike"
+                                onChange={handleChange}
+                                value={user.fname}
+                                required
+                            />
+                        </label>
+                        <label className="field-group">
+                            <span className="field-label">Last name</span>
+                            <input
+                                className="field-input"
+                                name="lname"
+                                type="text"
+                                placeholder="Mills"
+                                onChange={handleChange}
+                                value={user.lname}
+                                required
+                            />
+                        </label>
+                        <label className="field-group">
+                            <span className="field-label">Phone number</span>
+                            <input
+                                className="field-input"
+                                name="phone"
+                                type="tel"
+                                placeholder="0712 345 678"
+                                onChange={handleChange}
+                                value={user.phone}
+                                required
+                            />
+                        </label>
+                    </div>
+                <div className="submit-row">
+                    <button className="primary-button" type="submit">Create account</button>
+                    <button className="secondary-button" type="button" onClick={showLogin}>Log in</button>
+                    <span className="status-text">{status}</span>
+                </div>
+            </form>
+            </section>
+
         </div>
-        <h1>Sign Up</h1>
-        <div>First Name</div>
-        <input name="fname" type="text" placeholder="mike" onChange={handleChange} value={user.fname}/>
-        <div>Last Name</div>
-        <input name="lname" type="text" placeholder="mill"  onChange={handleChange} value={user.lname}/>
-        <div>Phone</div>
-        <input name="phone" type="text" placeholder="0712345678" onChange={handleChange} value={user.phone}/>
-        <div>
-            <button onClick={(e) => signUp(e)}>Signup</button>
-        </div>
-        <div>{status}</div>
-    </div>
+    )
 }

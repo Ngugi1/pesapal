@@ -11,6 +11,7 @@ services:
     volumes:
       - ./web:/app # for hot reload
       - /app/node_modules
+
   server:
     ports:
       - 3003:3003
