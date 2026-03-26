@@ -1,7 +1,7 @@
 const defaultApiBase =
     typeof window === 'undefined'
-        ? 'http://http://158.220.86.151:5173'
-        : `${window.location.protocol}//${window.location.hostname}:3003`
+        ? 'http://158.220.86.151:3003'
+        : '/api'
 
 type StatusSetter = (message: string) => void
 

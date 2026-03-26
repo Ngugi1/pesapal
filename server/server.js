@@ -17,7 +17,7 @@ let dbConnection = connector()
 // Init server
 let app = express()
 app.use(cors());
-app.port = 3003
+app.port = Number(process.env.PORT) || 3003
 // For json parsing
 app.use(express.json())
 

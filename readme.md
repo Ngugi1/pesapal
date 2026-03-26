@@ -29,12 +29,30 @@ MYSQL_HOST=db
 - The whole set of available endpoints is published [here](https://llms55.postman.co/workspace/LLMs~fdcf35b6-92d5-4b64-917e-f4b1678b3d0d/collection/931606-8f60028d-291f-4d71-8e95-b9fcdece8f86?action=share&creator=931606)
 - Alternatively, open `./server/server.js` to see the complete set of endpoints 
 
+## Linux deployment notes
+- The API server now reads `PORT` and defaults to `3003`.
+- The web app defaults to calling `/api` from the browser instead of hardcoding `hostname:3003`.
+- For local Vite development, `/api` is proxied to `http://localhost:3003`.
+- For production on a Linux server, configure your reverse proxy so `/api/*` forwards to the Node server. Example with Nginx:
+
+```nginx
+location /api/ {
+    proxy_pass http://127.0.0.1:3003/;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+
+- If you do not want to use a reverse proxy path, set `VITE_API_BASE_URL` at build time to your public API URL.
+
 ## The front-end
 The visual web application can be accessed via link: http://localhost:5173/
 
 ## Notes
 Please note that due to limited time, some areas of the app especially on the front-end were done in a hurry and thus the quality may not be as great.
-
 
 
 
