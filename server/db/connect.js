@@ -16,10 +16,10 @@ async function getConnection() {
             namedPlaceholders: true
         });
     }catch (exp) {
-        throw new Error('Database connection could not be established.')
+        const reason = exp instanceof Error ? exp.message : String(exp)
+        throw new Error(`Database connection could not be established: ${reason}`)
     }
    
 }
 
 module.exports.connector = getConnection
-

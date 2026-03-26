@@ -1,7 +1,7 @@
 const defaultApiBase =
     typeof window === 'undefined'
         ? 'http://server:3003'
-        : '/api'
+        : 'http://server:3003'
 
 type StatusSetter = (message: string) => void
 
