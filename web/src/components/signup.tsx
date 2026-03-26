@@ -1,8 +1,8 @@
 import { useState } from "react"
+import type { ChangeEvent, FormEvent } from "react"
 import {useNavigate} from 'react-router-dom'
 import { apiUrl, post, processResponse } from './util'
 import './signup.css'
-import shopHero from '../assets/shop-icon.png'
 import dashboardShot from '../assets/dashboard-screenshot.svg'
 // Tellesserver to register this user
 export function SignUp() {
@@ -15,7 +15,7 @@ export function SignUp() {
         }
     )
     const [status, setStatus] = useState("")
-    const handleChange = (e) => {
+    const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
         // get name and value of html target
         const { name, value } = e.target;
         setUser((prev) => ({
@@ -23,7 +23,7 @@ export function SignUp() {
         [name]: value
         }));
     };
-    async function signUp(e){
+    async function signUp(e: FormEvent<HTMLFormElement>){
         e.preventDefault(); 
         setStatus('') // reset status
         const res = await post(apiUrl('/user/create'), {
@@ -32,13 +32,13 @@ export function SignUp() {
             phone: user.phone
         })
 
-        const jsonData = await processResponse(res, 'Sign up Failed', setStatus)
+        const jsonData = await processResponse<SignUpResponse>(res, 'Sign up Failed', setStatus)
         if(jsonData) {
             const shopRes = await post(apiUrl('/shop/create'), {
                 owner_id: jsonData.id,
                 name: user.shop
             })
-            const shopData = await processResponse(shopRes, 'Shop creation failed', setStatus)
+            const shopData = await processResponse<ShopResponse>(shopRes, 'Shop creation failed', setStatus)
             if (shopData) {
                 const session = {
                     shop_id: shopData.id,
@@ -68,7 +68,7 @@ export function SignUp() {
                 <div className="signup-hero">
                 <div className="hero-copy-block">
                     <div className="hero-eyebrow brand-line">
-                        <img className="brand-icon" src={shopHero} alt="Shop icon" />
+                        <i className="fa-solid fa-book brand-icon" aria-hidden="true" />
                         <span className="brand-name">Kitabu</span>
                     </div>
                     <h1 className="hero-title">Kitabu cha deni.</h1>
@@ -182,3 +182,5 @@ export function SignUp() {
         </div>
     )
 }
+    type SignUpResponse = { id: number; existing?: boolean; error?: string }
+    type ShopResponse = { id: number; error?: string }

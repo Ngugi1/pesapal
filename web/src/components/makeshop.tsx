@@ -1,5 +1,6 @@
 import { useLocation } from 'react-router-dom';
 import { useState } from "react"
+import type { FormEvent } from 'react';
 import {useNavigate} from 'react-router-dom'
 import { apiUrl, post, processResponse } from './util'
 import './makeshop.css'
@@ -7,16 +8,15 @@ import shopLogo from '../assets/shop-icon.png'
 export function MakeShop() {
     const navigate = useNavigate()
     const {state} = useLocation()
-    console
-    const [user, _] = useState(state)
+    const [user] = useState(state as { id: number; fname: string; lname: string; phone: string })
     const [shop, setShop] = useState('')
     const [status, setStatus] = useState('')
-    async function makeShop(e) {
+    async function makeShop(e: FormEvent<HTMLFormElement>) {
         setStatus('')
         e.preventDefault();
         const result = await post(apiUrl('/shop/create'), 
             {owner_id: user.id, name: shop})
-        const jsonData = await processResponse(result, 'Make Shop Failed', setStatus)
+        const jsonData = await processResponse<ShopResponse>(result, 'Make Shop Failed', setStatus)
         if(jsonData) {
             navigate('/shopdisplay', {state: {shop_id: jsonData.id, ...user, sname: shop}})
         }
@@ -74,3 +74,4 @@ export function MakeShop() {
         </div>
     )
 }
+    type ShopResponse = { id: number; error?: string }

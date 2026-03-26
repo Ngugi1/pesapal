@@ -39,8 +39,8 @@ module.exports.settled = async function (connection, shopId, res) {
         INNER JOIN Product p ON
             p.id = d.product_id
         INNER JOIN Settlement stlmt ON
-            stlmt.id = d.id
-        INNER JOIN User u ON 
+            stlmt.debt_id = d.id
+        LEFT JOIN User u ON 
             u.id = d.debtor_user_id
         WHERE
             s.id = ? AND d.forgiven = FALSE;

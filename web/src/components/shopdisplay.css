@@ -115,10 +115,15 @@
 }
 
 .app-badge-icon {
-  width: 28px;
-  height: 28px;
+  width: 36px;
+  height: 36px;
   border-radius: 8px;
-  object-fit: cover;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  color: var(--accent-dark);
+  background: rgba(255, 255, 255, 0.68);
   box-shadow: 0 4px 10px rgba(12, 38, 82, 0.12);
 }
 
@@ -388,6 +393,26 @@
   height: 40px;
   padding: 0;
   border-radius: 999px;
+}
+
+.sales-detail-page .detail-add-button {
+  background: #2f9c6d;
+  color: #fff;
+}
+
+.expenses-detail-page .detail-add-button {
+  background: #d95c4f;
+  color: #fff;
+}
+
+.debt-detail-page .detail-add-button {
+  background: var(--accent);
+  color: #fff;
+}
+
+.catalog-detail-page .detail-add-button {
+  background: #d9ad00;
+  color: #fff;
 }
 
 .action-modal {
@@ -1629,8 +1654,9 @@
   }
 
   .app-badge-icon {
-    width: 24px;
-    height: 24px;
+    width: 30px;
+    height: 30px;
+    font-size: 1rem;
   }
 
   .app-badge-label {

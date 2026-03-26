@@ -1,31 +1,97 @@
 import { useEffect, useState } from 'react'
+import type { FormEvent, KeyboardEvent, MouseEvent } from 'react'
 import {useLocation} from 'react-router-dom'
 import { apiUrl, post, processResponse } from './util'
-import shopIcon from '../assets/shop-icon.png'
 import './shopdisplay.css'
+
+type ShopSession = {
+    id: number
+    shop_id?: number
+    sname: string
+    fname?: string
+    lname?: string
+    phone?: string
+}
+
+type DebtRecord = {
+    id: number
+    debtor_user_id?: number | null
+    debtor?: string
+    debtor_phone?: string
+    phone?: string
+    comments?: string
+    pname: string
+    quantity: number
+    unit_price: number
+    total_price: number
+    forgiven?: boolean | number
+    date_issued?: number
+    date_forgiven?: number
+    total_paid?: number
+    full_settlement?: number
+    has_settlement?: number
+    last_settlement_date?: number
+}
+
+type CatalogItem = {
+    shop_id: number
+    product_id: number
+    pname: string
+    description?: string
+}
+
+type SaleRecord = {
+    id: number
+    shop_id: number
+    product_id?: number | null
+    product_name: string
+    quantity: number
+    unit_price: number
+    total_amount: number
+    sale_date: number
+    notes?: string
+}
+
+type ExpenseRecord = {
+    id: number
+    shop_id: number
+    category: string
+    amount: number
+    expense_date: number
+    notes?: string
+}
+
+type OverviewSummary = {
+    sales_count: number
+    sales_total: number
+    expense_count: number
+    expense_total: number
+    debt_issued_count: number
+    debt_issued_total: number
+    debt_payment_count: number
+    debt_paid_total: number
+    outstanding_count: number
+    outstanding_total: number
+    net_flow: number
+    recent_activity: Array<Record<string, unknown>>
+}
+
+type UserCreateResponse = { id: number; existing?: boolean; error?: string }
+type ShopCreateResponse = { id: number; error?: string }
+type EntityCreateResponse = { id: number; error?: string }
+
 export function ShopDisplay() {
     const {state} = useLocation()
-    console.log(state)
-    const [shop, setShop] = useState(state ?? null)
+    const [shop, setShop] = useState<ShopSession | null>((state as ShopSession | null) ?? null)
     const [sessionChecked, setSessionChecked] = useState(false)
-    const [debts, setDebts] = useState([])
-    const [catalog, setCatalog] = useState([])
-    const [products, setProducts] = useState([])
+    const [debts, setDebts] = useState<DebtRecord[]>([])
+    const [catalog, setCatalog] = useState<CatalogItem[]>([])
     const [catalogLoaded, setCatalogLoaded] = useState(false)
-    const [stats, setStats] = useState({
-        total_count: 0,
-        total_amount: 0,
-        outstanding_count: 0,
-        outstanding_amount: 0,
-        paid_count: 0,
-        paid_amount: 0
-    })
-    const [statsLoaded, setStatsLoaded] = useState(false)
-    const [settleTarget, setSettleTarget] = useState(null)
+    const [settleTarget, setSettleTarget] = useState<DebtRecord | null>(null)
     const [settleAmount, setSettleAmount] = useState('')
     const [settleMode, setSettleMode] = useState('amount')
     const [settleQuantity, setSettleQuantity] = useState('')
-    const [debtQuery, setDebtQuery] = useState('')
+    const [detailQuery, setDetailQuery] = useState('')
     const [debt, setDebt] = useState({
         creditor_shop_id: shop?.shop_id ?? shop?.id ?? null,
         product_id: -1,
@@ -33,12 +99,11 @@ export function ShopDisplay() {
         unit_price: -1,
         comments: ''
     })
-    const [selectedProduct, setSelectedProduct] = useState(-1)
     const [selected, setSelected] = useState(-1)
     const [activeModal, setActiveModal] = useState<null | 'debt' | 'sale' | 'expense' | 'catalog'>(null)
     const [debtFilter, setDebtFilter] = useState('outstanding')
-    const [expandedDebtId, setExpandedDebtId] = useState(null)
-    const [overview, setOverview] = useState({
+    const [expandedDebtId, setExpandedDebtId] = useState<number | null>(null)
+    const [overview, setOverview] = useState<OverviewSummary>({
         sales_count: 0,
         sales_total: 0,
         expense_count: 0,
@@ -52,8 +117,8 @@ export function ShopDisplay() {
         net_flow: 0,
         recent_activity: []
     })
-    const [sales, setSales] = useState([])
-    const [expenses, setExpenses] = useState([])
+    const [sales, setSales] = useState<SaleRecord[]>([])
+    const [expenses, setExpenses] = useState<ExpenseRecord[]>([])
     const [period, setPeriod] = useState('day')
     const [customFrom, setCustomFrom] = useState('')
     const [customTo, setCustomTo] = useState('')
@@ -83,7 +148,6 @@ export function ShopDisplay() {
         shop: ''
     })
     const [setupMode, setSetupMode] = useState('signup')
-    console.log(state)
     const shopId = shop?.shop_id ?? shop?.id
     const needsSetup = !shopId
     const displayShop = shop ?? { sname: 'Your Shop' }
@@ -101,7 +165,7 @@ export function ShopDisplay() {
                 }
             }
 
-            const validateSession = async (session: any) => {
+            const validateSession = async (session: ShopSession) => {
                 if (!session?.id || !session?.phone || !session?.shop_id) {
                     clearSession()
                     return
@@ -182,12 +246,12 @@ export function ShopDisplay() {
         return () => window.removeEventListener('scroll', onScroll)
     }, [])
 
-    const formatMoney = (value) => {
+    const formatMoney = (value: number | string | undefined | null) => {
         const amount = Number(value) || 0
         return amount.toFixed(2)
     }
 
-    const formatCompactValue = (value) => {
+    const formatCompactValue = (value: number | string | undefined | null) => {
         const amount = Number(value) || 0
         const abs = Math.abs(amount)
         if (abs >= 1000000) {
@@ -200,7 +264,7 @@ export function ShopDisplay() {
         return amount.toFixed(2)
     }
 
-    const fromDateTimeInput = (value) => {
+    const fromDateTimeInput = (value: string) => {
         if (!value) return null
         const parsed = new Date(value).getTime()
         if (!Number.isFinite(parsed)) return null
@@ -246,7 +310,7 @@ export function ShopDisplay() {
         return `from=${range.from}&to=${range.to}`
     }
 
-    const uniqueById = (items, idKey) => {
+    const uniqueById = <T extends Record<string, unknown>>(items: T[], idKey: keyof T) => {
         const seen = new Set()
         return items.filter((item) => {
             const key = item?.[idKey]
@@ -256,24 +320,24 @@ export function ShopDisplay() {
         })
     }
 
-    const parseNumber = (value) => {
+    const parseNumber = (value: number | string | undefined | null) => {
         const num = Number(value)
         return Number.isFinite(num) ? num : NaN
     }
 
-    const formatTs = (ts) => {
+    const formatTs = (ts: number | string | undefined | null) => {
         if (!ts || ts === -1) return null
         const ms = Number(ts) * 1000
         if (!Number.isFinite(ms)) return null
         return new Date(ms).toLocaleString()
     }
 
-    const normalizeAmount = (value) => {
+    const normalizeAmount = (value: number) => {
         if (!Number.isFinite(value)) return NaN
         return Math.round(value * 100) / 100
     }
 
-    const calcAmountFromQuantity = (qtyValue, unitPriceValue) => {
+    const calcAmountFromQuantity = (qtyValue: string, unitPriceValue: number | string | undefined | null) => {
         const qty = parseInt(qtyValue, 10)
         const unitPrice = parseNumber(unitPriceValue)
         if (!Number.isFinite(qty) || !Number.isFinite(unitPrice)) return NaN
@@ -281,13 +345,11 @@ export function ShopDisplay() {
     }
 
     const uniqueCatalog = uniqueById(catalog, 'product_id')
-    const uniqueProducts = uniqueById(products, 'id')
     useEffect(() => {
         if (!shopId) return
         fetch(apiUrl(`/catalog/shop/${shopId}`)).then((res) => {
             if(res.status === 200) {
                 res.json().then((value) => {
-                    console.log("----------- Catalog:::::::", value)
                     setCatalog(value)
                     setCatalogLoaded(true)
                     if (value?.length && debt.product_id === -1) {
@@ -305,38 +367,13 @@ export function ShopDisplay() {
 
     function loadDebts() {
         if (!shopId) return
-        fetch(apiUrl(`/debt/list/${shopId}`)).then((value) => {
+        fetch(apiUrl(`/debt/list/${shopId}?${queryString()}`)).then((value) => {
             if(value.status === 200) {
                 value.json().then((data) => {
                    setDebts(data)
                 })
             }
         })
-    }
-
-    function loadProducts() {
-        fetch(apiUrl('/product/all')).then((res) => {
-            res.json().then((v) => {
-                setProducts(v)
-                if (v?.length && selectedProduct === -1) {
-                    setSelectedProduct(v[0].id)
-                }
-            })
-        })
-    }
-
-    function loadStats() {
-        if (!shopId) return
-        fetch(apiUrl(`/debt/stats/${shopId}`)).then((res) => {
-            if (res.status === 200) {
-                res.json().then((data) => {
-                    setStats(data)
-                    setStatsLoaded(true)
-                })
-            } else {
-                setStatsLoaded(true)
-            }
-        }).catch(() => setStatsLoaded(true))
     }
 
     function loadOverview() {
@@ -377,19 +414,19 @@ export function ShopDisplay() {
             loadDebts()
             loadSales()
             loadExpenses()
-            loadProducts()
         } else if(selected === 0) {
             loadDebts()
-            loadStats()
         }else if (selected === 1) {
             loadSales()
-            loadProducts()
         }else if (selected === 2) {
             loadExpenses()
-        }else if (selected === 3) {
-            loadProducts()
         }
     }, [selected, shopId, period, customFrom, customTo])
+
+    useEffect(() => {
+        setDetailQuery('')
+        setExpandedDebtId(null)
+    }, [selected])
 
     useEffect(() => {
         if (shopId && debt.creditor_shop_id !== shopId) {
@@ -410,13 +447,13 @@ export function ShopDisplay() {
     }, [catalog, debt.product_id])
 
     const filteredSales = sales.filter((sale) => {
-        const q = debtQuery.trim().toLowerCase()
+        const q = detailQuery.trim().toLowerCase()
         if (!q) return true
         return `${sale?.product_name ?? ''} ${sale?.notes ?? ''}`.toLowerCase().includes(q)
     })
 
     const filteredExpenses = expenses.filter((expense) => {
-        const q = debtQuery.trim().toLowerCase()
+        const q = detailQuery.trim().toLowerCase()
         if (!q) return true
         return `${expense?.category ?? ''} ${expense?.notes ?? ''}`.toLowerCase().includes(q)
     })
@@ -441,7 +478,7 @@ export function ShopDisplay() {
                 return true
         }
     }).filter((d) => {
-        const q = debtQuery.trim().toLowerCase()
+        const q = detailQuery.trim().toLowerCase()
         if (!q) return true
         const debtor = `${d?.debtor ?? ''}`.toLowerCase()
         const product = `${d?.pname ?? ''}`.toLowerCase()
@@ -513,20 +550,20 @@ export function ShopDisplay() {
         }
     })()
 
-    function forgiveDebt(debt) {
+    function forgiveDebt(debt: DebtRecord) {
         post(apiUrl(`/debt/forgive/${debt.id}`), {})
         .then((res) => {
-            if(res.status == 200) {
+            if(res.status === 200) {
                 setDebts((d) => {
-                    return d.filter(item => item.id != debt.id)
+                    return d.filter(item => item.id !== debt.id)
                 })
-                loadStats()
+                loadOverview()
             }else{
                 alert("Something went wrong")
             }
         })
     }
-    function settleDebt(debt, amountValue, quantityValue, mode) {
+    function settleDebt(debt: DebtRecord, amountValue: string, quantityValue: string, mode: string) {
         const total = parseNumber(debt.total_price)
         const unitPrice = parseNumber(debt.unit_price)
         if (mode === 'quantity') {
@@ -570,7 +607,7 @@ export function ShopDisplay() {
         submitSettlement(debt, amount, isFull)
     }
 
-    function submitSettlement(debt, amount, isFull) {
+    function submitSettlement(debt: DebtRecord, amount: number, isFull: boolean) {
         fetch(apiUrl('/debt/settle'), {
             method: 'PUT',
             headers: {
@@ -581,12 +618,12 @@ export function ShopDisplay() {
             if(res.status === 200) {
                 if (isFull) {
                     setDebts((old) => {
-                        return old.filter(d => d.id != debt.id)
+                        return old.filter(d => d.id !== debt.id)
                     })
                 } else {
                     loadDebts()
                 }
-                loadStats()
+                loadOverview()
                 setSettleTarget(null)
                 setSettleAmount('')
                 setSettleQuantity('')
@@ -598,12 +635,12 @@ export function ShopDisplay() {
 
     }
 
-    function removeCatalogItem(item) {
+    function removeCatalogItem(item: CatalogItem) {
         fetch(apiUrl(`/catalog/remove/${item.shop_id}/${item.product_id}`), {
             method: 'DELETE'
         }).then((res) => {
             if(res.status === 200) {
-                res.json().then((value) => {
+                res.json().then(() => {
                     setCatalog((old) => {
                         return old.filter(c => c.product_id !== item.product_id)
                     })
@@ -627,7 +664,7 @@ export function ShopDisplay() {
             name,
             description: catalogForm.description.trim()
         }).then(async (productRes) => {
-            const productData = await processResponse(productRes, 'Create product failed', setCatalogStatus)
+            const productData = await processResponse<EntityCreateResponse>(productRes, 'Create product failed', setCatalogStatus)
             if (!productData?.id) return
             post(apiUrl('/catalog/create'), {shop_id: shopId, product_id: productData.id}).then((res) => {
                 if(res.status === 200) {
@@ -647,7 +684,7 @@ export function ShopDisplay() {
         })
     }
 
-    function addSale(e) {
+    function addSale(e: FormEvent<HTMLFormElement>) {
         e.preventDefault()
         setSaleStatus('')
         if (!shopId) {
@@ -673,7 +710,7 @@ export function ShopDisplay() {
                 notes: saleForm.notes
             })
         }).then(async (res) => {
-            const jsonData = await processResponse(res, 'Add sale failed', setSaleStatus)
+            const jsonData = await processResponse<EntityCreateResponse>(res, 'Add sale failed', setSaleStatus)
             if (jsonData) {
                 setSaleForm({ product_id: saleForm.product_id, quantity: '1', unit_price: '', notes: '' })
                 loadOverview()
@@ -683,7 +720,7 @@ export function ShopDisplay() {
         })
     }
 
-    function addExpense(e) {
+    function addExpense(e: FormEvent<HTMLFormElement>) {
         e.preventDefault()
         setExpenseStatus('')
         if (!shopId) {
@@ -707,7 +744,7 @@ export function ShopDisplay() {
                 notes: expenseForm.notes
             })
         }).then(async (res) => {
-            const jsonData = await processResponse(res, 'Add expense failed', setExpenseStatus)
+            const jsonData = await processResponse<EntityCreateResponse>(res, 'Add expense failed', setExpenseStatus)
             if (jsonData) {
                 setExpenseForm({ category: '', amount: '', notes: '' })
                 loadOverview()
@@ -725,7 +762,7 @@ export function ShopDisplay() {
         setShop(null)
         setSelected(-1)
         setActiveModal(null)
-        setDebtQuery('')
+        setDetailQuery('')
         setExpandedDebtId(null)
     }
 
@@ -753,7 +790,7 @@ export function ShopDisplay() {
     const topBar =  (
             <>
                 <div className="app-badge">
-                    <img src={shopIcon} alt="Kitabu app icon" className="app-badge-icon" />
+                    <i className="fa-solid fa-book app-badge-icon" aria-hidden="true" />
                     <div className="app-badge-copy">
                         <span className="app-badge-label">Kitabu · {appBadgeShopName}</span>
                         <span className="app-badge-meta">Shop dashboard</span>
@@ -789,12 +826,12 @@ export function ShopDisplay() {
                 )}
                 {showOverviewCards && (
                 <div className="overview-card-grid overview-row">
-                    <article className="mini-stat-card overview-tile overview-span-left sales-card" onClick={() => setSelected(1)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setSelected(1) }}>
+                    <article className="mini-stat-card overview-tile overview-span-left sales-card" onClick={() => setSelected(1)} role="button" tabIndex={0} onKeyDown={(e: KeyboardEvent<HTMLElement>) => { if (e.key === 'Enter' || e.key === ' ') setSelected(1) }}>
                         <div className="mini-stat-top">
                             <span className="mini-stat-icon positive">
                                 <i className="fa-solid fa-money-bill-trend-up" aria-hidden="true" />
                             </span>
-                            <button className="mini-add-button sale-add-button" type="button" onClick={(e) => { e.stopPropagation(); setActiveModal('sale') }}>+</button>
+                            <button className="mini-add-button sale-add-button" type="button" onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); setActiveModal('sale') }}>+</button>
                         </div>
                         <span className="stat-label">Sales</span>
                         <span className="stat-value">{formatCompactValue(overview.sales_total)}</span>
@@ -808,12 +845,12 @@ export function ShopDisplay() {
                             ))}
                         </div>
                     </article>
-                    <article className="mini-stat-card overview-tile overview-span-right expenses-card" onClick={() => setSelected(2)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setSelected(2) }}>
+                    <article className="mini-stat-card overview-tile overview-span-right expenses-card" onClick={() => setSelected(2)} role="button" tabIndex={0} onKeyDown={(e: KeyboardEvent<HTMLElement>) => { if (e.key === 'Enter' || e.key === ' ') setSelected(2) }}>
                         <div className="mini-stat-top">
                             <span className="mini-stat-icon warning">
                                 <i className="fa-solid fa-money-bill-transfer" aria-hidden="true" />
                             </span>
-                            <button className="mini-add-button expense-add-button" type="button" onClick={(e) => { e.stopPropagation(); setActiveModal('expense') }}>+</button>
+                            <button className="mini-add-button expense-add-button" type="button" onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); setActiveModal('expense') }}>+</button>
                         </div>
                         <span className="stat-label">Expenses</span>
                         <span className="stat-value">{formatCompactValue(overview.expense_total)}</span>
@@ -827,12 +864,12 @@ export function ShopDisplay() {
                             ))}
                         </div>
                     </article>
-                    <article className="mini-stat-card overview-tile overview-span-left debt-card-overview" onClick={() => setSelected(0)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setSelected(0) }}>
+                    <article className="mini-stat-card overview-tile overview-span-left debt-card-overview" onClick={() => setSelected(0)} role="button" tabIndex={0} onKeyDown={(e: KeyboardEvent<HTMLElement>) => { if (e.key === 'Enter' || e.key === ' ') setSelected(0) }}>
                         <div className="mini-stat-top">
                             <span className="mini-stat-icon neutral">
                                 <i className="fa-solid fa-file-invoice-dollar" aria-hidden="true" />
                             </span>
-                            <button className="mini-add-button debt-add-button" type="button" onClick={(e) => { e.stopPropagation(); setActiveModal('debt') }}>+</button>
+                            <button className="mini-add-button debt-add-button" type="button" onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); setActiveModal('debt') }}>+</button>
                         </div>
                         <span className="stat-label">Debt</span>
                         <span className="stat-value">{formatCompactValue(overview.outstanding_total)}</span>
@@ -846,12 +883,12 @@ export function ShopDisplay() {
                             ))}
                         </div>
                     </article>
-                    <article className="mini-stat-card overview-tile overview-span-right catalog-card" onClick={() => setSelected(3)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setSelected(3) }}>
+                    <article className="mini-stat-card overview-tile overview-span-right catalog-card" onClick={() => setSelected(3)} role="button" tabIndex={0} onKeyDown={(e: KeyboardEvent<HTMLElement>) => { if (e.key === 'Enter' || e.key === ' ') setSelected(3) }}>
                         <div className="mini-stat-top">
                             <span className="mini-stat-icon catalog">
                                 <i className="fa-solid fa-box-open" aria-hidden="true" />
                             </span>
-                            <button className="mini-add-button catalog-add-button" type="button" onClick={(e) => { e.stopPropagation(); setActiveModal('catalog') }}>+</button>
+                            <button className="mini-add-button catalog-add-button" type="button" onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); setActiveModal('catalog') }}>+</button>
                         </div>
                         <span className="stat-label">Catalog</span>
                         <span className="stat-value">{catalog.length}</span>
@@ -870,7 +907,7 @@ export function ShopDisplay() {
             </>
     )
 
-    async function giveDebt(e) {
+    async function giveDebt(e: FormEvent<HTMLFormElement>) {
         e.preventDefault()
         if(!shopId) {
             alert('Shop id missing. Please go back and open a shop.')
@@ -884,7 +921,6 @@ export function ShopDisplay() {
             if(res.status === 200) {
                 res.json().then(() => {
                     loadDebts()
-                    loadStats()
                     loadOverview()
                     setDebt((old) => ({
                         ...old,
@@ -916,13 +952,13 @@ export function ShopDisplay() {
                                 lname: setupData.lname,
                                 phone: setupData.phone
                             })
-                            const userData = await processResponse(userRes, 'Sign up Failed', setSetupStatus)
+                            const userData = await processResponse<UserCreateResponse>(userRes, 'Sign up Failed', setSetupStatus)
                             if (userData) {
                                 const shopRes = await post(apiUrl('/shop/create'), {
                                     owner_id: userData.id,
                                     name: setupData.shop
                                 })
-                                const shopData = await processResponse(shopRes, 'Shop creation failed', setSetupStatus)
+                                const shopData = await processResponse<ShopCreateResponse>(shopRes, 'Shop creation failed', setSetupStatus)
                                 if (shopData) {
                                     const session = {
                                         shop_id: shopData.id,
@@ -1049,7 +1085,7 @@ export function ShopDisplay() {
                 Back
             </button>
             <div className="app-badge detail-app-badge">
-                <img src={shopIcon} alt="Kitabu app icon" className="app-badge-icon" />
+                <i className="fa-solid fa-book app-badge-icon" aria-hidden="true" />
                 <div className="app-badge-copy">
                     <span className="app-badge-label">Kitabu · {appBadgeShopName}</span>
                     <span className="app-badge-meta">Shop dashboard</span>
@@ -1081,7 +1117,7 @@ export function ShopDisplay() {
 
     const actionModal = activeModal ? (
         <div className="modal-backdrop" onClick={() => setActiveModal(null)}>
-            <div className="modal-card action-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-card action-modal" onClick={(e: MouseEvent<HTMLDivElement>) => e.stopPropagation()}>
                 {activeModal === 'debt' && (
                     <>
                         <h3>Add debt</h3>
@@ -1141,6 +1177,7 @@ export function ShopDisplay() {
                                 <input type="text" placeholder="Optional note" value={saleForm.notes} onChange={(e) => setSaleForm((old) => ({ ...old, notes: e.target.value }))} />
                             </label>
                             <div className="modal-actions span-2">
+                                <span className="status-text">{saleStatus}</span>
                                 <button className="ghost-button" type="button" onClick={() => setActiveModal(null)}>Cancel</button>
                                 <button className="primary-button" type="submit">Add sale</button>
                             </div>
@@ -1165,6 +1202,7 @@ export function ShopDisplay() {
                                 <input type="text" placeholder="Optional note" value={expenseForm.notes} onChange={(e) => setExpenseForm((old) => ({ ...old, notes: e.target.value }))} />
                             </label>
                             <div className="modal-actions span-2">
+                                <span className="status-text">{expenseStatus}</span>
                                 <button className="ghost-button" type="button" onClick={() => setActiveModal(null)}>Cancel</button>
                                 <button className="primary-button" type="submit">Record expense</button>
                             </div>
@@ -1255,8 +1293,8 @@ export function ShopDisplay() {
                     <input
                         type="text"
                         placeholder="Search debts"
-                        value={debtQuery}
-                        onChange={(e) => setDebtQuery(e.target.value)}
+                        value={detailQuery}
+                        onChange={(e) => setDetailQuery(e.target.value)}
                     />
                 </div>
                 {catalogLoaded && catalog.length === 0 && (
@@ -1393,7 +1431,7 @@ export function ShopDisplay() {
                                                 <span className="action-dot settle-dot" />
                                                 Settle
                                             </button>
-                                            <button className="ghost-button forgive" onClick={(e) => forgiveDebt(d)}>
+                                            <button className="ghost-button forgive" onClick={() => forgiveDebt(d)}>
                                                 <span className="action-dot forgive-dot" />
                                                 Forgive
                                             </button>
@@ -1408,7 +1446,7 @@ export function ShopDisplay() {
             </div>
             {settleTarget && (
                 <div className="modal-backdrop" onClick={() => setSettleTarget(null)}>
-                    <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+                    <div className="modal-card" onClick={(e: MouseEvent<HTMLDivElement>) => e.stopPropagation()}>
                         <h3>Settle debt</h3>
                         <p className="page-subtitle">
                             {settleTarget.debtor || settleTarget.comments || 'Customer'} · {settleTarget.pname}
@@ -1500,8 +1538,8 @@ export function ShopDisplay() {
                     <input
                         type="text"
                         placeholder="Search sales"
-                        value={debtQuery}
-                        onChange={(e) => setDebtQuery(e.target.value)}
+                        value={detailQuery}
+                        onChange={(e) => setDetailQuery(e.target.value)}
                     />
                 </div>
             </div>
@@ -1555,8 +1593,8 @@ export function ShopDisplay() {
                     <input
                         type="text"
                         placeholder="Search expenses"
-                        value={debtQuery}
-                        onChange={(e) => setDebtQuery(e.target.value)}
+                        value={detailQuery}
+                        onChange={(e) => setDetailQuery(e.target.value)}
                     />
                 </div>
             </div>
@@ -1622,7 +1660,7 @@ export function ShopDisplay() {
                                 <div className="item-title">{c.pname}</div>
                                 <div className="item-meta">{c.description}</div>
                             </div>
-                            <button className="ghost-button danger" onClick={(e) => removeCatalogItem(c)}>Remove</button>
+                            <button className="ghost-button danger" onClick={() => removeCatalogItem(c)}>Remove</button>
                         </div>
                     ))}
                 </div>
@@ -1637,6 +1675,6 @@ export function ShopDisplay() {
             )}
         </div>
     }else{
-        return <div className="shop-page home-page">{logoutButton}{topBar}{setupModal}{actionModal}{pageFooter}</div>
+        return <div className="shop-page home-page">{topBar}{setupModal}{actionModal}{pageFooter}</div>
     }
 }

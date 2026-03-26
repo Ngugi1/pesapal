@@ -120,15 +120,18 @@ app.get('/catalog/shop/:id', async (req, res) => {
 
 // Give debt
 app.get('/debt/getall/:shop_id', async (req, res) => {
-    await debt.getAll(dbConnection, req.params.shop_id, res)
+    const range = parseDateRange(req)
+    await debt.getAll(dbConnection, req.params.shop_id, range.from, range.to, res)
 })
 // Debt stats
 app.get('/debt/stats/:shop_id', async (req, res) => {
-    await debt.stats(dbConnection, req.params.shop_id, res)
+    const range = parseDateRange(req)
+    await debt.stats(dbConnection, req.params.shop_id, range.from, range.to, res)
 })
 // Debt list (all statuses)
 app.get('/debt/list/:shop_id', async (req, res) => {
-    await debt.listAll(dbConnection, req.params.shop_id, res)
+    const range = parseDateRange(req)
+    await debt.listAll(dbConnection, req.params.shop_id, range.from, range.to, res)
 })
 
 

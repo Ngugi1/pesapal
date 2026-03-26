@@ -110,10 +110,10 @@ module.exports.summary = async function(connection, shopId, fromTs, toTs, res) {
                     date_issued AS activity_date,
                     CONCAT(p.pname, ' credit issued') AS title,
                     total_price AS amount,
-                    CONCAT(u.fname, ' ', u.lname) AS notes
+                    COALESCE(NULLIF(TRIM(CONCAT(COALESCE(u.fname, ''), ' ', COALESCE(u.lname, ''))), ''), d.comments, 'Customer not specified') AS notes
                 FROM Debt d
                 INNER JOIN Product p ON p.id = d.product_id
-                INNER JOIN User u ON u.id = d.debtor_user_id
+                LEFT JOIN User u ON u.id = d.debtor_user_id
                 WHERE d.creditor_shop_id = ?
                   AND d.date_issued BETWEEN ? AND ?
             ) activity

@@ -1,5 +1,15 @@
 const util = require('./util')
 const {DebtErrorCodes} = require('./errors')
+
+function normalizeRange(fromTs, toTs) {
+    const now = Math.floor(Date.now() / 1000)
+    const from = Number(fromTs)
+    const to = Number(toTs)
+    return {
+        from: Number.isFinite(from) && from > 0 ? Math.floor(from) : 0,
+        to: Number.isFinite(to) && to > 0 ? Math.floor(to) : now
+    }
+}
 module.exports.create = async function(connection, debt, res) {
     if(!debt) {
         util.error(res, "Debt item not provided", DebtErrorCodes.DEBT_DATA_NOT_PROVIDED)
@@ -52,8 +62,8 @@ module.exports.forgive = async function(connection, debtId, res) {
    
 }
 
-module.exports.getAll = async function(connection, shopId, res) {
-    console.log(shopId, "}}}}}}}}}}}")
+module.exports.getAll = async function(connection, shopId, fromTs, toTs, res) {
+    const range = normalizeRange(fromTs, toTs)
     const [results] = await connection.query(
         `
             SELECT
@@ -72,19 +82,20 @@ module.exports.getAll = async function(connection, shopId, res) {
             INNER JOIN Product p ON 
                 p.id = d.product_id
             WHERE d.creditor_shop_id = ?
+              AND d.date_issued BETWEEN ? AND ?
               AND d.forgiven = FALSE
               AND d.id NOT IN (
                 SELECT debt_id FROM Settlement WHERE is_full_settlement = TRUE
               );
         `,
-        [shopId]
+        [shopId, range.from, range.to]
     )
-    console.log(results)
     res.send(results)
 
 }
 
-module.exports.listAll = async function(connection, shopId, res) {
+module.exports.listAll = async function(connection, shopId, fromTs, toTs, res) {
+    const range = normalizeRange(fromTs, toTs)
     const [results] = await connection.query(
         `
             SELECT
@@ -118,14 +129,16 @@ module.exports.listAll = async function(connection, shopId, res) {
                 FROM Settlement
                 GROUP BY debt_id
             ) s ON s.debt_id = d.id
-            WHERE d.creditor_shop_id = ?;
+            WHERE d.creditor_shop_id = ?
+              AND d.date_issued BETWEEN ? AND ?;
         `,
-        [shopId]
+        [shopId, range.from, range.to]
     )
     res.send(results)
 }
 
-module.exports.stats = async function(connection, shopId, res) {
+module.exports.stats = async function(connection, shopId, fromTs, toTs, res) {
+    const range = normalizeRange(fromTs, toTs)
     const [rows] = await connection.query(
         `
         SELECT
@@ -161,9 +174,10 @@ module.exports.stats = async function(connection, shopId, res) {
             FROM Settlement
             GROUP BY debt_id
         ) s ON s.debt_id = d.id
-        WHERE d.creditor_shop_id = ?;
+        WHERE d.creditor_shop_id = ?
+          AND d.date_issued BETWEEN ? AND ?;
         `,
-        [shopId]
+        [shopId, range.from, range.to]
     )
     res.json(rows?.[0] ?? {
         total_count: 0,
