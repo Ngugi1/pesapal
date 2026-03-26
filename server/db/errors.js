@@ -39,3 +39,15 @@ module.exports.SettleErrorCodes = Object.freeze({
     DEBT_DATA_NOT_PROVIDED: 211111
 
 });
+
+module.exports.SaleErrorCodes = Object.freeze({
+    SALE_EXISTS: 1011111,
+    SALE_CREATE_FAILED: 1111111,
+    SALE_DATA_NOT_PROVIDED: 2111111
+});
+
+module.exports.ExpenseErrorCodes = Object.freeze({
+    EXPENSE_EXISTS: 10111111,
+    EXPENSE_CREATE_FAILED: 11111111,
+    EXPENSE_DATA_NOT_PROVIDED: 21111111
+});

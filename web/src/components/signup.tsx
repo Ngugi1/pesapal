@@ -1,15 +1,17 @@
 import { useState } from "react"
 import {useNavigate} from 'react-router-dom'
-import { processResponse } from './util'
+import { apiUrl, post, processResponse } from './util'
 import './signup.css'
 import shopHero from '../assets/shop-icon.png'
+import dashboardShot from '../assets/dashboard-screenshot.svg'
 // Tellesserver to register this user
 export function SignUp() {
     const navigate = useNavigate()
     const [user, setUser] = useState({
             fname: '', 
             lname: '',
-            phone: ''
+            phone: '',
+            shop: ''
         }
     )
     const [status, setStatus] = useState("")
@@ -24,19 +26,34 @@ export function SignUp() {
     async function signUp(e){
         e.preventDefault(); 
         setStatus('') // reset status
-        const res = await fetch('http://localhost:3003/user/create', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(user)
+        const res = await post(apiUrl('/user/create'), {
+            fname: user.fname,
+            lname: user.lname,
+            phone: user.phone
         })
 
         const jsonData = await processResponse(res, 'Sign up Failed', setStatus)
         if(jsonData) {
-            // navigate to create shop page with user ID
-            console.log({...jsonData})
-            navigate('/makeshop',{ state: {...jsonData, ...user}, replace: true })
+            const shopRes = await post(apiUrl('/shop/create'), {
+                owner_id: jsonData.id,
+                name: user.shop
+            })
+            const shopData = await processResponse(shopRes, 'Shop creation failed', setStatus)
+            if (shopData) {
+                const session = {
+                    shop_id: shopData.id,
+                    sname: user.shop,
+                    fname: user.fname,
+                    lname: user.lname,
+                    phone: user.phone,
+                    id: jsonData.id
+                }
+                localStorage.setItem('kitabu_session', JSON.stringify(session))
+                navigate('/shopdisplay', {
+                    state: session,
+                    replace: true
+                })
+            }
         }
     }
 
@@ -49,7 +66,7 @@ export function SignUp() {
         <div className="signup-page">
             <section className="signup-grid">
                 <div className="signup-hero">
-                <div>
+                <div className="hero-copy-block">
                     <div className="hero-eyebrow brand-line">
                         <img className="brand-icon" src={shopHero} alt="Shop icon" />
                         <span className="brand-name">Kitabu</span>
@@ -74,6 +91,13 @@ export function SignUp() {
                         </div>
                     </div>
                 </div>
+                <div className="hero-shot">
+                    <div className="shot-header">
+                        <span className="shot-label">Main dashboard</span>
+                        <span className="shot-note">Live balances and customer status at a glance.</span>
+                    </div>
+                    <img src={dashboardShot} alt="Kitabu dashboard preview" />
+                </div>
                 <div className="steps-card">
                     <h3>What happens next</h3>
                     <ul className="steps-list">
@@ -83,11 +107,11 @@ export function SignUp() {
                         </li>
                         <li className="steps-item">
                             <span className="step-badge">2</span>
-                            <span className="step-text">Create your shop so we can attach customers and items.</span>
+                            <span className="step-text">Add customers so you can track every regular.</span>
                         </li>
                         <li className="steps-item">
                             <span className="step-badge">3</span>
-                            <span className="step-text">Add catalog items before lending on credit.</span>
+                            <span className="step-text">Add catalog items, then extend debts, forgive, or settle.</span>
                         </li>
                     </ul>
                 </div>
@@ -97,7 +121,19 @@ export function SignUp() {
                         <h2>Sign up</h2>
                         <p className="page-subtitle">Let’s get your ledger ready for daily use.</p>
                     </div>
-                    <div className="form-grid">
+                    <div>
+                        <label className="field-group">
+                            <span className="field-label">Shop name</span>
+                            <input
+                                className="field-input"
+                                name="shop"
+                                type="text"
+                                placeholder="Makini Shop"
+                                onChange={handleChange}
+                                value={user.shop}
+                                required
+                            />
+                        </label>
                         <label className="field-group">
                             <span className="field-label">First name</span>
                             <input

@@ -1,31 +1,34 @@
 const util = require('./util')
 const {DebtErrorCodes} = require('./errors')
 module.exports.create = async function(connection, debt, res) {
-    const table = "Debt"
-    const columns = [
-        "creditor_shop_id", 
-        "debtor_user_id", 
-        "product_id",
-        "quantity", 
-        "unit_price"
-    ]
     if(!debt) {
         util.error(res, "Debt item not provided", DebtErrorCodes.DEBT_DATA_NOT_PROVIDED)
-    }else{
-        const values = columns.map(c => debt[c])
-        
-        if(!await util.exists(connection, table, columns, values)) {
-            const result = await util.insert(connection, table, columns, values)
-            if(result.insertId) {
-                res.send({id: result.insertId, ...debt})
-            }else {
-                util.error(res, "Debt item could not be created", DebtErrorCodes.DEBT_CREATE_FAILED)
-            }
-        }else{
-            util.error(res, "A duplicate debt item exists", DebtErrorCodes.DEBT_EXISTS)
-        }
+        return
     }
-   
+
+    const columns = [
+        "creditor_shop_id",
+        "debtor_user_id",
+        "product_id",
+        "quantity",
+        "unit_price",
+        "comments"
+    ]
+    const values = [
+        debt.creditor_shop_id,
+        debt.debtor_user_id ?? null,
+        debt.product_id,
+        debt.quantity,
+        debt.unit_price,
+        debt.comments ?? ''
+    ]
+
+    const result = await util.insert(connection, "Debt", columns, values)
+    if(result.insertId) {
+        res.send({id: result.insertId, ...debt})
+    }else {
+        util.error(res, "Debt item could not be created", DebtErrorCodes.DEBT_CREATE_FAILED)
+    }
 }
 
 module.exports.settle = async function(connection, debtId, res) {
@@ -56,17 +59,18 @@ module.exports.getAll = async function(connection, shopId, res) {
             SELECT
                 d.id,
                 u.id as debtor_user_id,
-                CONCAT(u.fname, ' ', u.lname) as debtor,
+                TRIM(CONCAT(COALESCE(u.fname, ''), ' ', COALESCE(u.lname, ''))) as debtor,
                 u.phone as debtor_phone,
+                d.comments,
                 p.pname,
                 d.quantity,
                 d.unit_price,
                 d.total_price
             FROM Debt d
-            INNER JOIN User u ON 
-                u.id = debtor_user_id
+            LEFT JOIN User u ON 
+                u.id = d.debtor_user_id
             INNER JOIN Product p ON 
-                p.id = product_id
+                p.id = d.product_id
             WHERE d.creditor_shop_id = ?
               AND d.forgiven = FALSE
               AND d.id NOT IN (
@@ -85,7 +89,9 @@ module.exports.listAll = async function(connection, shopId, res) {
         `
             SELECT
                 d.id,
-                CONCAT(u.fname, ' ', u.lname) as debtor,
+                TRIM(CONCAT(COALESCE(u.fname, ''), ' ', COALESCE(u.lname, ''))) as debtor,
+                u.phone as debtor_phone,
+                d.comments,
                 p.pname,
                 d.quantity,
                 d.unit_price,
@@ -98,10 +104,10 @@ module.exports.listAll = async function(connection, shopId, res) {
                 COALESCE(s.has_settlement, 0) as has_settlement,
                 s.last_settlement_date
             FROM Debt d
-            INNER JOIN User u ON 
-                u.id = debtor_user_id
+            LEFT JOIN User u ON 
+                u.id = d.debtor_user_id
             INNER JOIN Product p ON 
-                p.id = product_id
+                p.id = d.product_id
             LEFT JOIN (
                 SELECT
                     debt_id,

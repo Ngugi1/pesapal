@@ -1,7 +1,7 @@
 import { useLocation } from 'react-router-dom';
 import { useState } from "react"
 import {useNavigate} from 'react-router-dom'
-import {post, processResponse} from './util'
+import { apiUrl, post, processResponse } from './util'
 import './makeshop.css'
 import shopLogo from '../assets/shop-icon.png'
 export function MakeShop() {
@@ -14,7 +14,7 @@ export function MakeShop() {
     async function makeShop(e) {
         setStatus('')
         e.preventDefault();
-        const result = await post('http://localhost:3003/shop/create', 
+        const result = await post(apiUrl('/shop/create'), 
             {owner_id: user.id, name: shop})
         const jsonData = await processResponse(result, 'Make Shop Failed', setStatus)
         if(jsonData) {

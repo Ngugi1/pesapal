@@ -10,6 +10,9 @@ const catalog = require('./db/catalog')
 const debt = require('./db/debt')
 const settle = require('./db/settle')
 const shopCustomer = require('./db/shopCustomer')
+const sale = require('./db/sale')
+const expense = require('./db/expense')
+const overview = require('./db/overview')
 let dbConnection = connector()
 // Init server
 let app = express()
@@ -23,10 +26,10 @@ async function startServer() {
     // Keep one DB connection - a pool may be better in prod
     try{
         dbConnection = await connector()
-        app.listen(app.port, async() => {
-            console.log(`Server running at http://localhost:${app.port}`);
+        app.listen(app.port, '0.0.0.0', () => {
+            console.log(`Server running at http://0.0.0.0:${app.port}`);
         });
-    }catch (ex) {
+    }catch (err) {
         console.error('Fatal error during startup:', err);
         process.exit(1); // Non-zero is failure code - like return 0 in C
 
@@ -34,6 +37,16 @@ async function startServer() {
 }
 
 startServer()
+
+function parseDateRange(req) {
+    const now = Math.floor(Date.now() / 1000)
+    const from = Number(req.query.from)
+    const to = Number(req.query.to)
+    return {
+        from: Number.isFinite(from) && from > 0 ? Math.floor(from) : 0,
+        to: Number.isFinite(to) && to > 0 ? Math.floor(to) : now
+    }
+}
 
 // TODO:: Move routes to separate file
 app.get('/', (req, res) => {
@@ -49,6 +62,9 @@ app.post('/user/create', async (req, res) => {
 app.get('/users/all', async (req, res) => {
     await user.all(dbConnection, res)
 })
+app.get('/user/phone/:phone', async (req, res) => {
+    await user.findByPhone(dbConnection, req.params.phone, res)
+})
 
 // Create a shop
 app.post('/shop/create', async (req, res) => {
@@ -57,6 +73,9 @@ app.post('/shop/create', async (req, res) => {
 // Get profile of a shop
 app.get('/shop/profile/:id', async (req, res) => {
     await shop.profile(dbConnection, req.params.id, res)
+})
+app.get('/shop/owner/:owner_id', async (req, res) => {
+    await shop.byOwner(dbConnection, req.params.owner_id, res)
 })
 
 app.get('/shop/profile/settled/:id', async (req, res)=> {
@@ -126,4 +145,27 @@ app.post('/debt/forgive/:id', async (req, res) => {
 // Settle debt
 app.put('/debt/settle', async (req, res) => {
     await settle.create(dbConnection, req.body, res)
+})
+
+app.post('/sale/create', async (req, res) => {
+    await sale.create(dbConnection, req.body, res)
+})
+
+app.get('/sale/list/:shop_id', async (req, res) => {
+    const range = parseDateRange(req)
+    await sale.list(dbConnection, req.params.shop_id, range.from, range.to, res)
+})
+
+app.post('/expense/create', async (req, res) => {
+    await expense.create(dbConnection, req.body, res)
+})
+
+app.get('/expense/list/:shop_id', async (req, res) => {
+    const range = parseDateRange(req)
+    await expense.list(dbConnection, req.params.shop_id, range.from, range.to, res)
+})
+
+app.get('/overview/:shop_id', async (req, res) => {
+    const range = parseDateRange(req)
+    await overview.summary(dbConnection, req.params.shop_id, range.from, range.to, res)
 })

@@ -1,0 +1,17 @@
+{
+  "name": "Kitabu",
+  "short_name": "Kitabu",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b2d6b",
+  "theme_color": "#0f4496",
+  "description": "Mobile-first shop ledger for debts, sales, and expenses.",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

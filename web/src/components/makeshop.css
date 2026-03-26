@@ -26,6 +26,18 @@
 .identity-text {
   display: grid;
   gap: 8px;
+  color: #f3f7ff;
+}
+
+.identity-text .page-title {
+  color: #f3f7ff;
+}
+
+.identity-text .hero-eyebrow,
+.identity-text .page-subtitle,
+.identity-text .owner-label,
+.identity-text .owner-phone {
+  color: #c6dbf2;
 }
 
 .shop-visual {
@@ -33,7 +45,7 @@
   border: 1px solid rgba(255, 255, 255, 0.85);
   border-radius: 22px;
   padding: 12px;
-  box-shadow: 0 18px 40px rgba(31, 157, 106, 0.18);
+  box-shadow: 0 18px 40px rgb(var(--accent-rgb) / 0.18);
   backdrop-filter: blur(12px);
   max-width: 200px;
 }
@@ -63,7 +75,7 @@
 .owner-label {
   text-transform: uppercase;
   letter-spacing: 0.16em;
-  font-weight: 600;
+  font-weight: 800;
   font-size: 0.7rem;
 }
 
@@ -114,6 +126,7 @@
   display: grid;
   gap: 20px;
   backdrop-filter: blur(16px);
+  color: var(--ink);
 }
 
 @media (max-width: 900px) {
