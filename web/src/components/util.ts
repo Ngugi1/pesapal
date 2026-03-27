@@ -1,4 +1,8 @@
-const defaultApiBase = typeof window === 'undefined' ? 'http://127.0.0.1:3003' : '/api'
+const browserBasePath = (import.meta.env.VITE_APP_BASE_PATH || '/').replace(/\/$/, '')
+const defaultApiBase =
+    typeof window === 'undefined'
+        ? 'http://127.0.0.1:3003'
+        : `${browserBasePath === '' ? '' : browserBasePath}/api`
 
 type StatusSetter = (message: string) => void
 

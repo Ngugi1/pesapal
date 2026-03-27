@@ -1,5 +1,7 @@
 FROM node:20-alpine AS build
 WORKDIR /app
+ARG VITE_APP_BASE_PATH=/
+ENV VITE_APP_BASE_PATH=$VITE_APP_BASE_PATH
 COPY package.json package-lock.json* ./
 RUN npm ci
 COPY . .
