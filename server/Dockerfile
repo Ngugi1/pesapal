@@ -1,7 +1,7 @@
 FROM node:24-alpine
 WORKDIR /app
 COPY package*.json .
-RUN npm install
+RUN npm ci --omit=dev
 COPY . .
 EXPOSE 3003
-CMD [ "npx", "nodemon", "server.js" ]
+CMD ["npm", "run", "start"]

@@ -1,14 +1,12 @@
-const defaultApiBase =
-    typeof window === 'undefined'
-        ? 'http://server:3003'
-        : 'http://server:3003'
+const defaultApiBase = typeof window === 'undefined' ? 'http://127.0.0.1:3003' : '/api'
 
 type StatusSetter = (message: string) => void
 
 export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/$/, '')
 
 export function apiUrl(path: string) {
-    return `/api${path}` 
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`
+    return `${API_BASE_URL}${normalizedPath}`
 }
 
 export async function post<TBody>(url: string, body: TBody) {

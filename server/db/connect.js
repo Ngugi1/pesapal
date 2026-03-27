@@ -1,18 +1,27 @@
 // Reference material: // https://medium.com/@vimalveeramani/getting-started-with-node-mysql2-a-faster-mysql-client-for-node-js-a4da91be5767
+const fs = require('fs')
 const mysql = require('mysql2/promise')
-require('dotenv').config(); 
 /**
  * 
  * @returns a connection to pesapaldb
  */
 async function getConnection() {
+    const runningInDocker = fs.existsSync('/.dockerenv')
+    const configuredHost = process.env.MYSQL_HOST || '127.0.0.1'
+    const host = configuredHost === 'db' && !runningInDocker ? '127.0.0.1' : configuredHost
+    const user = process.env.MYSQL_USER || process.env.MYSQL_ROOT_USER || 'root'
+    const password = process.env.MYSQL_PASSWORD || process.env.MYSQL_ROOT_PASSWORD || ''
+    const database = process.env.MYSQL_DATABASE || 'pesapaldb'
+    const port = Number(process.env.MYSQL_PORT) || 3306
+
     try{
          return await mysql.createConnection(
         {
-            host: process.env.MYSQL_HOST, 
-            user: process.env.MYSQL_ROOT_USER, 
-            password: process.env.MYSQL_ROOT_PASSWORD, 
-            database: process.env.MYSQL_DATABASE,
+            host,
+            port,
+            user,
+            password,
+            database,
             namedPlaceholders: true
         });
     }catch (exp) {

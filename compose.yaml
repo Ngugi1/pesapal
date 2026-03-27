@@ -5,6 +5,8 @@ services:
       dockerfile: Dockerfile
     ports:
       - 5173:5173
+    environment:
+      VITE_API_PROXY_TARGET: http://server:3003
     depends_on: 
       - server
       - db
@@ -13,6 +15,7 @@ services:
       - /app/node_modules
 
   server:
+    restart: always
     ports:
       - 3003:3003
     depends_on:
@@ -39,7 +42,7 @@ services:
       # Tests if the DB is actually ready to receive queries
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
-      timeout: 5s
+      timeout: 15s
       retries: 5
       start_period: 20s
     volumes:

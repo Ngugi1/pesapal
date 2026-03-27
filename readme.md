@@ -31,9 +31,12 @@ MYSQL_HOST=db
 
 ## Linux deployment notes
 - The API server now reads `PORT` and defaults to `3003`.
+- The API server now reads database settings from env and supports both `MYSQL_USER` / `MYSQL_PASSWORD` and the previous `MYSQL_ROOT_USER` / `MYSQL_ROOT_PASSWORD`.
 - The web app defaults to calling `/api` from the browser instead of hardcoding `hostname:3003`.
-- For local Vite development, `/api` is proxied to `http://localhost:3003`.
-- For production on a Linux server, configure your reverse proxy so `/api/*` forwards to the Node server. Example with Nginx:
+- For local Vite development outside Docker, `/api` is proxied to `http://127.0.0.1:3003`.
+- For Docker development, the `web` service sets `VITE_API_PROXY_TARGET=http://server:3003`.
+- For production with Docker, the `web` container serves the built static app with Nginx and proxies `/api/*` to the `server` container.
+- For production on a Linux server with an external reverse proxy, point the proxy at the `web` container rather than Vite. Example with Nginx:
 
 ```nginx
 location /api/ {
@@ -48,13 +51,40 @@ location /api/ {
 
 - If you do not want to use a reverse proxy path, set `VITE_API_BASE_URL` at build time to your public API URL.
 
+## Production Docker on a VPS
+- Use `compose.yaml` for local development only.
+- Use `compose.prod.yaml` for server deployment.
+- The production web image no longer runs Vite. It builds the React app and serves the generated `dist` files from Nginx.
+- The production server image no longer runs `nodemon`. It runs `npm run start`.
+- The service worker is disabled for now to avoid stale deploys being cached by browsers.
+
+### First deployment flow
+1. Copy the repo to the server.
+2. Create or update `.env` with production secrets.
+3. Build and start the production stack:
+   `docker compose -f compose.prod.yaml up -d --build`
+4. Verify locally on the server:
+   `curl http://127.0.0.1:8080`
+5. Point your existing gateway / Nginx proxy to `http://127.0.0.1:8080`.
+
+### Notes for servers with an existing gateway
+- If your Contabo server already has Nginx, a gateway, or another reverse proxy running, do not expose Vite or the Node API publicly.
+- Route your public domain to the `web` container only.
+- The `web` container already proxies `/api/*` internally to the `server` container.
+- If your gateway prefers Docker networks instead of host ports, you can remove `8080:80` from `compose.prod.yaml` and attach both stacks to the same external Docker network.
+
+### Updating a live deployment
+- Pull the latest code on the server.
+- Rebuild and restart:
+  `docker compose -f compose.prod.yaml up -d --build`
+- Confirm health:
+  `docker compose -f compose.prod.yaml ps`
+
 ## The front-end
 The visual web application can be accessed via link: http://localhost:5173/
 
 ## Notes
 Please note that due to limited time, some areas of the app especially on the front-end were done in a hurry and thus the quality may not be as great.
-
-
 
 
 
