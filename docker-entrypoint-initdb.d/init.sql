@@ -1,4 +1,4 @@
-USE pesapaldb;
+USE kitabudb;
 CREATE TABLE User(id INT PRIMARY KEY AUTO_INCREMENT, -- auto -indexed
                     fname VARCHAR(100) NOT NULL, 
                     lname VARCHAR(100) NOT NULL, 

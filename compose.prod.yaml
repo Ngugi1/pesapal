@@ -8,9 +8,9 @@ services:
     restart: unless-stopped
     depends_on:
       - server
-    ports:
-      - "80:80"
-
+    networks:
+      - default
+      - autogarage-network    
   server:
     build:
       context: ./server
@@ -24,7 +24,9 @@ services:
     depends_on:
       db:
         condition: service_healthy
-
+    networks:
+      - default
+      - autogarage-network
   db:
     image: mysql:8.4
     restart: unless-stopped
@@ -36,7 +38,7 @@ services:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD}"]
       interval: 10s
       timeout: 15s
-      retries: 10
+      retries: 30
       start_period: 30s
     volumes:
       - mysql-data:/var/lib/mysql
@@ -44,3 +46,8 @@ services:
 
 volumes:
   mysql-data:
+networks:
+  autogarage-network:
+    external: true
+    name: autogarage_autogarage-network
+
