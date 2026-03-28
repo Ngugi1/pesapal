@@ -57,6 +57,7 @@ location /api/ {
 - The production web image no longer runs Vite. It builds the React app and serves the generated `dist` files from Nginx.
 - The production server image no longer runs `nodemon`. It runs `npm run start`.
 - The service worker is disabled for now to avoid stale deploys being cached by browsers.
+- Production MySQL data lives in the Docker named volume `mysql-data`. That protects data from container restarts, but it is not a backup.
 
 ### First deployment flow
 1. Copy the repo to the server.
@@ -80,12 +81,34 @@ location /api/ {
 - Confirm health:
   `docker compose -f compose.prod.yaml ps`
 
+## Database backups outside Docker
+- Use `./scripts/backup-db.sh` to create a compressed MySQL dump on the host machine at `./backups/mysql/`.
+- The script reads `.env`, connects to the running `db` service from `compose.prod.yaml`, writes a timestamped `.sql.gz` file, and deletes backups older than 14 days by default.
+- Make the script executable once:
+  `chmod +x ./scripts/backup-db.sh`
+- Run it manually:
+  `./scripts/backup-db.sh`
+- Keep backups longer by overriding retention:
+  `RETENTION_DAYS=30 ./scripts/backup-db.sh`
+- Store backups in a different folder if you want them on another disk:
+  `BACKUP_DIR=/srv/kitabu-backups ./scripts/backup-db.sh`
+
+### Automate backups with cron
+Use the server's crontab so backups happen even when you forget:
+
+```cron
+0 */6 * * * cd /path/to/pesapal && /bin/bash ./scripts/backup-db.sh >> /var/log/kitabu-backup.log 2>&1
+```
+
+- The example above runs every 6 hours.
+- A good minimum for real customers is every night; every 6 hours is safer.
+- For stronger protection, sync the generated backup folder to a second machine or cloud bucket as a separate step.
+
 ## The front-end
 The visual web application can be accessed via link: http://localhost:5173/
 
 ## Notes
 Please note that due to limited time, some areas of the app especially on the front-end were done in a hurry and thus the quality may not be as great.
-
 
 
 
