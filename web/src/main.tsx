@@ -5,6 +5,7 @@ import './index.css'
 import App from './App.tsx'
 
 const routerBaseName = (import.meta.env.VITE_APP_BASE_PATH || '/').replace(/\/$/, '') || '/'
+const serviceWorkerUrl = `${import.meta.env.BASE_URL}sw.js`
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -14,14 +15,10 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 )
 
-if ('serviceWorker' in navigator) {
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.getRegistrations().then((registrations) => {
-      registrations.forEach((registration) => {
-        registration.unregister().catch(() => {
-          // Best effort cleanup for older local builds.
-        })
-      })
+    navigator.serviceWorker.register(serviceWorkerUrl).catch(() => {
+      // Best effort registration for installability and offline shell caching.
     })
   })
 }
