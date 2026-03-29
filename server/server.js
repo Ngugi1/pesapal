@@ -13,7 +13,7 @@ const shopCustomer = require('./db/shopCustomer')
 const sale = require('./db/sale')
 const expense = require('./db/expense')
 const overview = require('./db/overview')
-let dbConnection = connector()
+let dbConnection = null
 // Init server
 let app = express()
 app.use(cors());
@@ -23,7 +23,7 @@ app.use(express.json())
 
 
 async function startServer() {
-    // Keep one DB connection - a pool may be better in prod
+    // Use a pool so dropped MySQL sockets do not break every future request.
     try{
         dbConnection = await connector()
         app.listen(app.port, '0.0.0.0', () => {

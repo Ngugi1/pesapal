@@ -3,7 +3,7 @@ const fs = require('fs')
 const mysql = require('mysql2/promise')
 /**
  * 
- * @returns a connection to pesapaldb
+ * @returns a pool connected to pesapaldb
  */
 async function getConnection() {
     const runningInDocker = fs.existsSync('/.dockerenv')
@@ -15,15 +15,24 @@ async function getConnection() {
     const port = Number(process.env.MYSQL_PORT) || 3306
 
     try{
-         return await mysql.createConnection(
-        {
+         const pool = mysql.createPool({
             host,
             port,
             user,
             password,
             database,
-            namedPlaceholders: true
-        });
+            namedPlaceholders: true,
+            waitForConnections: true,
+            connectionLimit: Number(process.env.MYSQL_CONNECTION_LIMIT) || 10,
+            maxIdle: Number(process.env.MYSQL_MAX_IDLE) || 10,
+            idleTimeout: Number(process.env.MYSQL_IDLE_TIMEOUT_MS) || 60000,
+            enableKeepAlive: true,
+            keepAliveInitialDelay: 0
+        })
+
+        // Fail fast on startup if the database is unreachable.
+        await pool.query('SELECT 1')
+        return pool
     }catch (exp) {
         const reason = exp instanceof Error ? exp.message : String(exp)
         throw new Error(`Database connection could not be established: ${reason}`)
