@@ -36,7 +36,8 @@ services:
     environment:
       MYSQL_ROOT_HOST: '%'
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD}"]
+      # Use TCP + explicit user to avoid localhost socket auth quirks
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$${MYSQL_ROOT_PASSWORD}"]
       interval: 10s
       timeout: 15s
       retries: 30
