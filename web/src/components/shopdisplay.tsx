@@ -758,7 +758,6 @@ export function ShopDisplay() {
     const visibleExpenses = filteredExpenses.slice(0, visibleCounts.expense)
     const visibleCatalog = filteredCatalog.slice(0, visibleCounts.catalog)
     const visibleStock = filteredStock.slice(0, visibleCounts.stock)
-    const totalStockUnits = uniqueCatalog.reduce((sum, item) => sum + (Number(item.stock_quantity) || 0), 0)
     const lowStockCount = uniqueCatalog.filter((item) => Number(item.stock_quantity) <= 3).length
     const healthTone = overview.net_flow < 0 ? 'performance-down' : 'performance-up'
     const performanceDelta = overview.sales_total - overview.expense_total
