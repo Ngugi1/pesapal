@@ -78,6 +78,7 @@ type OverviewSummary = {
     outstanding_count: number
     outstanding_total: number
     net_flow: number
+    stock_value: number
     recent_activity: Array<Record<string, unknown>>
 }
 
@@ -86,7 +87,7 @@ type DetailSection = -1 | 0 | 1 | 2 | 3 | 4
 type UserCreateResponse = { id: number; existing?: boolean; error?: string }
 type ShopCreateResponse = { id: number; error?: string }
 type EntityCreateResponse = { id: number; error?: string }
-type EditableModal = 'debt' | 'sale' | 'expense' | 'catalog'
+type EditableModal = 'debt' | 'sale' | 'expense' | 'catalog' | 'stock'
 
 export function ShopDisplay() {
     const {state} = useLocation()
@@ -122,12 +123,18 @@ export function ShopDisplay() {
         debt_paid_total: 0,
         outstanding_count: 0,
         outstanding_total: 0,
+        stock_value: 0,
         net_flow: 0,
         recent_activity: []
     })
     const [sales, setSales] = useState<SaleRecord[]>([])
     const [expenses, setExpenses] = useState<ExpenseRecord[]>([])
-    const [period, setPeriod] = useState('day')
+    const getStoredPeriod = () => {
+        if (typeof window === 'undefined') return 'day'
+        const stored = window.localStorage.getItem('kitabu-period')
+        return stored ?? 'day'
+    }
+    const [period, setPeriod] = useState(getStoredPeriod)
     const [customFrom, setCustomFrom] = useState('')
     const [customTo, setCustomTo] = useState('')
     const [saleStatus, setSaleStatus] = useState('')
@@ -192,6 +199,10 @@ export function ShopDisplay() {
 
         return () => window.clearInterval(timer)
     }, [])
+    useEffect(() => {
+        if (typeof window === 'undefined') return
+        window.localStorage.setItem('kitabu-period', period)
+    }, [period])
     const isEditingSale = editingSaleId !== null
     const isEditingExpense = editingExpenseId !== null
     const isEditingCatalog = editingCatalogProductId !== null
@@ -199,7 +210,8 @@ export function ShopDisplay() {
         debt: isEditingDebt ? 'Edit debt' : 'Add debt',
         sale: isEditingSale ? 'Edit sale' : 'Add sale',
         expense: isEditingExpense ? 'Edit expense' : 'Add expense',
-        catalog: isEditingCatalog ? 'Edit catalog item' : 'Add catalog item'
+        catalog: isEditingCatalog ? 'Edit catalog item' : 'Add catalog item',
+        stock: isEditingCatalog ? 'Edit stock entry' : 'Add stock'
     }
 
     useEffect(() => {
@@ -533,7 +545,7 @@ export function ShopDisplay() {
         setActiveModal('expense')
     }
 
-    const openCatalogEditor = (item: CatalogItem) => {
+    const openCatalogEditor = (item: CatalogItem, modal: 'catalog' | 'stock' = 'catalog') => {
         setCatalogStatus('')
         setEditingCatalogProductId(item.product_id)
         setCatalogForm({
@@ -542,7 +554,7 @@ export function ShopDisplay() {
             stock_quantity: String(item.stock_quantity ?? 0),
             default_unit_price: item.default_unit_price ? String(item.default_unit_price) : ''
         })
-        setActiveModal('catalog')
+        setActiveModal(modal)
     }
     function loadCatalog() {
         if (!shopId) return
@@ -690,6 +702,21 @@ export function ShopDisplay() {
     })
     const filteredStock = filteredCatalog
 
+    const totalStockValue = uniqueCatalog.reduce((sum, item) => {
+        const qty = Number(item.stock_quantity ?? 0)
+        const price = Number(item.default_unit_price ?? 0)
+        if (!Number.isFinite(qty) || !Number.isFinite(price)) return sum
+        return sum + qty * price
+    }, 0)
+
+    const stockValueToShow = Number(overview.stock_value ?? 0) || totalStockValue
+    const filteredStockValue = filteredStock.reduce((sum, item) => {
+        const qty = Number(item.stock_quantity ?? 0)
+        const price = Number(item.default_unit_price ?? 0)
+        if (!Number.isFinite(qty) || !Number.isFinite(price)) return sum
+        return sum + qty * price
+    }, 0)
+
     const filteredDebts = debts.filter((d) => {
         const hasSettlement = Number(d.has_settlement) > 0 || Number(d.total_paid) > 0
         const isFull = Number(d.full_settlement) === 1
@@ -723,7 +750,7 @@ export function ShopDisplay() {
         .sort((a, b) => Number(b?.date_issued ?? 0) - Number(a?.date_issued ?? 0))
         .slice(0, 1)
 
-    const recentSales = filteredSales.slice(0, 1)
+    const recentSales = filteredSales.slice(0, 3)
     const recentExpenses = filteredExpenses.slice(0, 1)
     const recentCatalog = uniqueCatalog.slice(0, 1)
     const visibleDebts = filteredDebts.slice(0, visibleCounts.debt)
@@ -775,60 +802,45 @@ export function ShopDisplay() {
         }))
     }, [currentListKey, detailQuery, debtFilter, sales.length, expenses.length, debts.length, filteredCatalog.length, filteredStock.length])
 
-    const debtTotals = debts.reduce((acc, d) => {
-        const totalPrice = Number(d.total_price) || 0
-        const totalPaid = Number(d.total_paid) || 0
-        const isForgiven = d.forgiven === true || Number(d.forgiven) === 1
-        const isFull = Number(d.full_settlement) === 1
-        const hasSettlement = Number(d.has_settlement) > 0 || totalPaid > 0
-        const isPartial = hasSettlement && !isFull
-        acc.all.count += 1
-        acc.all.amount += totalPrice
-        if (isForgiven) {
-            acc.forgiven.count += 1
-            acc.forgiven.amount += Math.max(totalPrice - totalPaid, 0)
-        } else if (isFull) {
-            acc.fully.count += 1
-            acc.fully.amount += totalPaid || totalPrice
-        } else if (isPartial) {
-            acc.partial.count += 1
-            acc.partial.amount += totalPaid
-            acc.outstanding.count += 1
-            acc.outstanding.amount += Math.max(totalPrice - totalPaid, 0)
-        } else {
-            acc.outstanding.count += 1
-            acc.outstanding.amount += totalPrice
-        }
-        if (totalPaid > 0) {
-            acc.paid.count += 1
-            acc.paid.amount += totalPaid
-        }
-        return acc
-    }, {
-        all: { count: 0, amount: 0 },
-        paid: { count: 0, amount: 0 },
-        outstanding: { count: 0, amount: 0 },
-        forgiven: { count: 0, amount: 0 },
-        partial: { count: 0, amount: 0 },
-        fully: { count: 0, amount: 0 }
-    })
-
-    const currentTotals = (() => {
-        switch (debtFilter) {
+    const debtAmountForFilter = (debt: DebtRecord, filter: string) => {
+        const totalPrice = Number(debt.total_price) || 0
+        const totalPaid = Number(debt.total_paid) || 0
+        const outstanding = Math.max(totalPrice - totalPaid, 0)
+        switch (filter) {
             case 'paid':
-                return { label: 'Paid total', ...debtTotals.paid }
+                return totalPaid
             case 'forgiven':
-                return { label: 'Forgiven total', ...debtTotals.forgiven }
+                return outstanding
             case 'fully':
-                return { label: 'Fully paid total', ...debtTotals.fully }
+                return totalPaid || totalPrice
             case 'partial':
-                return { label: 'Partially paid total', ...debtTotals.partial }
+                return totalPaid
             case 'outstanding':
-                return { label: 'Balance total', ...debtTotals.outstanding }
+                return outstanding
             default:
-                return { label: 'Grand total', ...debtTotals.all }
+                return totalPrice
         }
-    })()
+    }
+
+    const filteredDebtAmount = filteredDebts.reduce(
+        (acc, debt) => acc + debtAmountForFilter(debt, debtFilter),
+        0
+    )
+
+    const filterLabels: Record<string, string> = {
+        paid: 'Paid total',
+        forgiven: 'Forgiven total',
+        fully: 'Fully paid total',
+        partial: 'Partially paid total',
+        outstanding: 'Balance total',
+        all: 'Grand total'
+    }
+
+    const currentTotals = {
+        label: filterLabels[debtFilter] ?? filterLabels.all,
+        count: filteredDebts.length,
+        amount: filteredDebtAmount
+    }
 
     function forgiveDebt(debt: DebtRecord) {
         post(apiUrl(`/debt/forgive/${debt.id}`), {})
@@ -837,6 +849,7 @@ export function ShopDisplay() {
                 setDebts((d) => {
                     return d.filter(item => item.id !== debt.id)
                 })
+                loadDebts()
                 loadOverview()
             }else{
                 alert("Something went wrong")
@@ -896,13 +909,7 @@ export function ShopDisplay() {
             body: JSON.stringify({debt_id: debt.id, amount, is_full_settlement: isFull, comments: isFull ? "Paid in full" : "Partial payment"})
         }).then((res) => {
             if(res.status === 200) {
-                if (isFull) {
-                    setDebts((old) => {
-                        return old.filter(d => d.id !== debt.id)
-                    })
-                } else {
-                    loadDebts()
-                }
+                loadDebts()
                 loadOverview()
                 setSettleTarget(null)
                 setSettleAmount('')
@@ -927,6 +934,7 @@ export function ShopDisplay() {
                     setCatalog((old) => {
                         return old.filter(c => c.product_id !== item.product_id)
                     })
+                    loadOverview()
                 })
             }
         })
@@ -989,6 +997,7 @@ export function ShopDisplay() {
                 const catalogData = await processResponse<EntityCreateResponse>(catalogRes, 'Update stock failed', setCatalogStatus)
                 if (productData && catalogData) {
                     loadCatalog()
+                    loadOverview()
                     closeActionModal()
                 }
             })
@@ -1008,6 +1017,7 @@ export function ShopDisplay() {
             }).then((res) => {
                 if(res.status === 200) {
                     loadCatalog()
+                    loadOverview()
                     closeActionModal()
                 } else {
                     setCatalogStatus('Add to catalog failed')
@@ -1029,9 +1039,19 @@ export function ShopDisplay() {
             setSaleStatus('Select item, quantity, and unit price')
             return
         }
+        const selectedProductId = parseInt(saleForm.product_id, 10)
+        const existingSale = isEditingSale ? sales.find((record) => record.id === editingSaleId) : null
+        const restoreQty = existingSale && existingSale.product_id === selectedProductId
+            ? Number(existingSale.quantity ?? 0)
+            : 0
+        const availableStock = Number(getCatalogItem(saleForm.product_id)?.stock_quantity ?? 0) + restoreQty
+        if (!Number.isFinite(availableStock) || quantity > availableStock) {
+            setSaleStatus('Not enough stock for this sale')
+            return
+        }
         const payload = {
             shop_id: shopId,
-            product_id: parseInt(saleForm.product_id, 10),
+            product_id: selectedProductId,
             quantity,
             unit_price: unitPrice,
             notes: saleForm.notes
@@ -1049,6 +1069,24 @@ export function ShopDisplay() {
                 closeActionModal()
             }
         })
+    }
+
+    function deleteSaleItem(saleRecord: SaleRecord) {
+        if (!window.confirm(`Delete sale for ${saleRecord.product_name || 'this item'}?`)) {
+            return
+        }
+
+        fetch(apiUrl(`/sale/remove/${saleRecord.id}`), { method: 'DELETE' })
+            .then(async (res) => {
+                if (res.status === 200) {
+                    loadSales()
+                    loadOverview()
+                } else {
+                    const data = await res.json().catch(() => undefined)
+                    alert(data?.error || 'Delete sale failed')
+                }
+            })
+            .catch(() => alert('Delete sale failed'))
     }
 
     function addExpense(e: FormEvent<HTMLFormElement>) {
@@ -1081,6 +1119,24 @@ export function ShopDisplay() {
                 closeActionModal()
             }
         })
+    }
+
+    function deleteExpenseItem(expenseRecord: ExpenseRecord) {
+        if (!window.confirm(`Delete expense for ${expenseRecord.category}?`)) {
+            return
+        }
+
+        fetch(apiUrl(`/expense/remove/${expenseRecord.id}`), { method: 'DELETE' })
+            .then(async (res) => {
+                if (res.ok) {
+                    loadExpenses()
+                    loadOverview()
+                } else {
+                    const data = await res.json().catch(() => undefined)
+                    alert(data?.error || 'Delete expense failed')
+                }
+            })
+            .catch(() => alert('Delete expense failed'))
     }
 
     function logout() {
@@ -1168,7 +1224,7 @@ export function ShopDisplay() {
                             <button className="mini-add-button sale-add-button" type="button" onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); openModalForCreate('sale') }}>+</button>
                         </div>
                         <span className="stat-label">Sales</span>
-                        <span className="stat-value">{formatCompactValue(overview.sales_total)}</span>
+                        <span className="stat-value">KSh {formatCompactValue(overview.sales_total)}</span>
                         <div className="mini-records">
                             {recentSales.length === 0 && <span className="mini-empty">No sales yet</span>}
                             {recentSales.map((sale) => (
@@ -1187,7 +1243,7 @@ export function ShopDisplay() {
                             <button className="mini-add-button expense-add-button" type="button" onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); openModalForCreate('expense') }}>+</button>
                         </div>
                         <span className="stat-label">Expenses</span>
-                        <span className="stat-value">{formatCompactValue(overview.expense_total)}</span>
+                        <span className="stat-value">KSh {formatCompactValue(overview.expense_total)}</span>
                         <div className="mini-records">
                             {recentExpenses.length === 0 && <span className="mini-empty">No expenses yet</span>}
                             {recentExpenses.map((expense) => (
@@ -1206,7 +1262,7 @@ export function ShopDisplay() {
                             <button className="mini-add-button debt-add-button" type="button" onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); openModalForCreate('debt') }}>+</button>
                         </div>
                         <span className="stat-label">Debt</span>
-                        <span className="stat-value">{formatCompactValue(overview.outstanding_total)}</span>
+                        <span className="stat-value">KSh {formatCompactValue(overview.outstanding_total)}</span>
                         <div className="mini-records">
                             {recentDebts.length === 0 && <span className="mini-empty">No debts yet</span>}
                             {recentDebts.map((debtItem) => (
@@ -1241,10 +1297,10 @@ export function ShopDisplay() {
                             <span className="mini-stat-icon stock">
                                 <i className="fa-solid fa-layer-group" aria-hidden="true" />
                             </span>
-                            <button className="mini-add-button stock-add-button" type="button" onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); openModalForCreate('catalog') }}>+</button>
+                            <button className="mini-add-button stock-add-button" type="button" onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); openModalForCreate('stock') }}>+</button>
                         </div>
                         <span className="stat-label">Stock</span>
-                        <span className="stat-value">{formatCompactValue(totalStockUnits)}</span>
+                        <span className="stat-value">KSh {formatCompactValue(stockValueToShow)}</span>
                         <div className="mini-records">
                             <div className="mini-record">
                                 <span className="mini-record-title">Units on hand</span>
@@ -1255,6 +1311,10 @@ export function ShopDisplay() {
                             <div className="mini-record">
                                 <span className="mini-record-title">Defaults ready for forms</span>
                                 <span className="mini-record-meta">Tap to manage stock</span>
+                            </div>
+                            <div className="mini-record">
+                                <span className="mini-record-title">Value in stock</span>
+                                <span className="mini-record-meta">{formatMoney(stockValueToShow)}</span>
                             </div>
                         </div>
                     </article>
@@ -1455,7 +1515,8 @@ export function ShopDisplay() {
                     selected === 0 ? 'debt' :
                     selected === 1 ? 'sale' :
                     selected === 2 ? 'expense' :
-                    'catalog'
+                    selected === 3 ? 'catalog' :
+                    'stock'
                 )}
             >
                 +
@@ -1490,6 +1551,28 @@ export function ShopDisplay() {
                 <option value="year">Yearly</option>
                 <option value="custom">Custom</option>
             </select>
+            {period === 'custom' && (
+                <div className="custom-range-grid detail-period-grid">
+                    <label className="field-group">
+                        <span className="field-label">From</span>
+                        <input
+                            className="field-input"
+                            type="datetime-local"
+                            value={customFrom}
+                            onChange={(e) => setCustomFrom(e.target.value)}
+                        />
+                    </label>
+                    <label className="field-group">
+                        <span className="field-label">To</span>
+                        <input
+                            className="field-input"
+                            type="datetime-local"
+                            value={customTo}
+                            onChange={(e) => setCustomTo(e.target.value)}
+                        />
+                    </label>
+                </div>
+            )}
         </div>
     )
 
@@ -1619,10 +1702,19 @@ export function ShopDisplay() {
                         </form>
                     </>
                 )}
-                {activeModal === 'catalog' && (
+                {(activeModal === 'catalog' || activeModal === 'stock') && (
                     <>
-                        <h3>{activeModalTitle.catalog}</h3>
-                        <p className="page-subtitle">{isEditingCatalog ? 'Update the product details used by this catalog item.' : 'Type the product name and add it straight to your catalog.'}</p>
+                        <h3>{activeModal === 'stock' ? activeModalTitle.stock : activeModalTitle.catalog}</h3>
+                        <p className="page-subtitle">
+                            {activeModal === 'catalog'
+                                ? isEditingCatalog
+                                    ? 'Update the product details used by this catalog item.'
+                                    : 'Type the product name and add it straight to your catalog.'
+                                : isEditingCatalog
+                                    ? 'Adjust the stock level and default price tracked for this item.'
+                                    : 'Record a fresh stock arrival before it hits your shelves.'
+                            }
+                        </p>
                         <form className="quick-entry-form" onSubmit={(e) => { e.preventDefault(); addToCatalog() }}>
                             <label className="field-group span-2">
                                 <span className="field-label">Product name</span>
@@ -1665,7 +1757,12 @@ export function ShopDisplay() {
                             <div className="modal-actions span-2">
                                 <span className="status-text">{catalogStatus}</span>
                                 <button className="ghost-button" type="button" onClick={closeActionModal}>Cancel</button>
-                                <button className="primary-button" type="submit">{isEditingCatalog ? 'Save item' : 'Add to catalog'}</button>
+                                <button className="primary-button" type="submit">
+                                    {activeModal === 'catalog'
+                                        ? isEditingCatalog ? 'Save item' : 'Add to catalog'
+                                        : isEditingCatalog ? 'Save stock' : 'Add stock'
+                                    }
+                                </button>
                             </div>
                         </form>
                     </>
@@ -1785,6 +1882,7 @@ export function ShopDisplay() {
                                         : { label: 'Outstanding', className: 'status-tag outstanding', dot: 'dot-outstanding' }
                             const isExpanded = expandedDebtId === d.id
                             const showStatusBadge = !(debtFilter === 'outstanding' && status.label === 'Outstanding')
+                            const showDebtActions = !isForgiven && !isFull
                             return (
                         <div className={`list-item debt-card ${isExpanded ? 'expanded' : 'collapsed'}`} key={d.id}>
                             <button
@@ -1838,19 +1936,7 @@ export function ShopDisplay() {
                                             </div>
                                         )}
                                     </div>
-                                    <div className="debt-total">
-                                        <span className="total-label">Balance</span>
-                                        <div className="total-right">
-                                            <span className="total-value">Total {d.total_price}</span>
-                                            {showStatusBadge && (
-                                                <span className={status.className}>
-                                                    <span className={`status-dot ${status.dot}`} />
-                                                    {status.label}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-                                    {!isForgiven && (
+                                    {showDebtActions && (
                                         <div className="debt-actions">
                                             {!hasSettlement && (
                                                 <button
@@ -2022,6 +2108,9 @@ export function ShopDisplay() {
                                 <button className="ghost-button icon-button" type="button" onClick={() => openSaleEditor(sale)} aria-label="Edit sale" title="Edit sale">
                                     <i className="fa-solid fa-pen-to-square" aria-hidden="true" />
                                 </button>
+                                <button className="ghost-button danger icon-button" type="button" onClick={() => deleteSaleItem(sale)} aria-label="Delete sale" title="Delete sale">
+                                    <i className="fa-solid fa-trash-can" aria-hidden="true" />
+                                </button>
                             </div>
                         </div>
                     ))}
@@ -2087,6 +2176,9 @@ export function ShopDisplay() {
                                 <button className="ghost-button icon-button" type="button" onClick={() => openExpenseEditor(expense)} aria-label="Edit expense" title="Edit expense">
                                     <i className="fa-solid fa-pen-to-square" aria-hidden="true" />
                                 </button>
+                                <button className="ghost-button danger icon-button" type="button" onClick={() => deleteExpenseItem(expense)} aria-label="Delete expense" title="Delete expense">
+                                    <i className="fa-solid fa-trash-can" aria-hidden="true" />
+                                </button>
                             </div>
                         </div>
                     ))}
@@ -2116,7 +2208,7 @@ export function ShopDisplay() {
                     <div>
                         <span className="detail-page-kicker">Catalog detail</span>
                         <h2>Catalog</h2>
-                        <p className="page-subtitle">Search, edit, and remove the items available in your shop catalog.</p>
+                        <p className="page-subtitle">Edit and remove the items available in your shop catalog.</p>
                     </div>
                 </div>
                 <div className="panel-search">
@@ -2131,7 +2223,6 @@ export function ShopDisplay() {
                     />
                 </div>
             </div>
-            {detailPeriodBar}
             <div className="panel glass detail-scroll-panel catalog-tone-panel">
                 <div className="panel-header">
                     <div>
@@ -2199,13 +2290,13 @@ export function ShopDisplay() {
                     />
                 </div>
             </div>
-            {detailPeriodBar}
-            <div className="panel glass detail-scroll-panel catalog-tone-panel">
-                <div className="ledger-total">
-                    <span className="ledger-label">Units in stock</span>
-                    <span className="ledger-value">{formatCompactValue(totalStockUnits)}</span>
-                    <span className="ledger-meta">{lowStockCount} low-stock items</span>
-                </div>
+                <div className="panel glass detail-scroll-panel catalog-tone-panel">
+                    <div className="ledger-total">
+                        <span className="ledger-label">Units in stock</span>
+                        <span className="ledger-value">{formatCompactValue(filteredStock.reduce((sum, item) => sum + (Number(item.stock_quantity) || 0), 0))}</span>
+                        <span className="ledger-meta">{lowStockCount} low-stock items</span>
+                        <span className="ledger-meta">Value {formatMoney(filteredStockValue || stockValueToShow)}</span>
+                    </div>
                 <div className="panel-list detail-scroll-list" ref={detailListRef} onScroll={handleDetailScroll}>
                     {filteredStock.length === 0 && (
                         <div className="empty-state">No stock items yet.</div>
@@ -2219,7 +2310,7 @@ export function ShopDisplay() {
                                 </div>
                             </div>
                             <div className="item-actions">
-                                <button className="ghost-button icon-button" type="button" onClick={() => openCatalogEditor(item)} aria-label="Edit stock item" title="Edit stock item">
+                                <button className="ghost-button icon-button" type="button" onClick={() => openCatalogEditor(item, 'stock')} aria-label="Edit stock item" title="Edit stock item">
                                     <i className="fa-solid fa-pen-to-square" aria-hidden="true" />
                                 </button>
                                 <button className="ghost-button danger icon-button" type="button" onClick={() => removeCatalogItem(item)} aria-label="Delete stock item" title="Delete stock item">

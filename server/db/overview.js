@@ -48,7 +48,7 @@ module.exports.summary = async function(connection, shopId, fromTs, toTs, res) {
         [shopId, fromTs, toTs]
     )
 
-    const [outstandingRows] = await connection.query(
+const [outstandingRows] = await connection.query(
         `
             SELECT
                 SUM(
@@ -73,6 +73,16 @@ module.exports.summary = async function(connection, shopId, fromTs, toTs, res) {
                 GROUP BY debt_id
             ) s ON s.debt_id = d.id
             WHERE d.creditor_shop_id = ?;
+        `,
+        [shopId]
+    )
+
+    const [stockValueRows] = await connection.query(
+        `
+            SELECT
+                COALESCE(SUM(c.stock_quantity * c.default_unit_price), 0) AS stock_value
+            FROM Catalog c
+            WHERE c.shop_id = ?;
         `,
         [shopId]
     )
@@ -140,7 +150,21 @@ module.exports.summary = async function(connection, shopId, fromTs, toTs, res) {
         debt_paid_total: Number(settlements.debt_paid_total ?? 0),
         outstanding_count: Number(outstanding.outstanding_count ?? 0),
         outstanding_total: Number(outstanding.outstanding_total ?? 0),
+        stock_value: Number(stockValueRows?.[0]?.stock_value ?? 0),
         net_flow: Number(sales.sales_total ?? 0) - Number(expenses.expense_total ?? 0),
         recent_activity: recentActivityRows ?? []
     })
+}
+
+module.exports.stockValue = async function(connection, shopId) {
+    const [rows] = await connection.query(
+        `
+            SELECT
+                COALESCE(SUM(c.stock_quantity * c.default_unit_price), 0) AS stock_value
+            FROM Catalog c
+            WHERE c.shop_id = ?;
+        `,
+        [shopId]
+    )
+    return Number(rows?.[0]?.stock_value ?? 0)
 }

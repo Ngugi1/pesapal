@@ -181,6 +181,10 @@ app.get('/sale/list/:shop_id', async (req, res) => {
     await sale.list(dbConnection, req.params.shop_id, range.from, range.to, res)
 })
 
+app.delete('/sale/remove/:id', async (req, res) => {
+    await sale.remove(dbConnection, req.params.id, res)
+})
+
 app.post('/expense/create', async (req, res) => {
     await expense.create(dbConnection, req.body, res)
 })
@@ -192,6 +196,10 @@ app.put('/expense/update/:id', async (req, res) => {
 app.get('/expense/list/:shop_id', async (req, res) => {
     const range = parseDateRange(req)
     await expense.list(dbConnection, req.params.shop_id, range.from, range.to, res)
+})
+
+app.delete('/expense/remove/:id', async (req, res) => {
+    await expense.remove(dbConnection, req.params.id, res)
 })
 
 app.get('/overview/:shop_id', async (req, res) => {

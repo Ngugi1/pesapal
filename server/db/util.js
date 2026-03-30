@@ -28,5 +28,5 @@ module.exports.updateById = async (connection, table, id, columns, values) => {
 }
 
 module.exports.error = function(res, message, code) {
-    res.send({"error": message, code: code})
+    res.status(400).json({ error: message, code })
 }

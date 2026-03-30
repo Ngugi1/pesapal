@@ -396,6 +396,7 @@
 
 .detail-period-strip {
   margin-top: 2px;
+  justify-content: flex-start;
 }
 
 .period-select {
@@ -1920,6 +1921,18 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
+}
+
+.detail-period-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.detail-period-grid .field-group {
+  margin: 0;
 }
 
 .quick-entry-form {

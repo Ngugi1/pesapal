@@ -39,13 +39,24 @@ export async function processResponse<TResponse extends { error?: string }>(
     setStatus: StatusSetter
 ) {
     let jsonData: TResponse | undefined
-    if (res.status === 200) {
+    try {
         jsonData = await res.json()
+    } catch (_err) {
+        jsonData = undefined
+    }
+
+    if (res.ok) {
         if (jsonData?.error) {
             setStatus(jsonData.error)
+            return undefined
         }
+        return jsonData
+    }
+
+    if (jsonData?.error) {
+        setStatus(jsonData.error)
     } else {
         setStatus(failMessage)
     }
-    return jsonData
+    return undefined
 }

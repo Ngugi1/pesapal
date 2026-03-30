@@ -70,3 +70,24 @@ module.exports.list = async function(connection, shopId, fromTs, toTs, res) {
     )
     res.json(rows)
 }
+
+module.exports.remove = async function(connection, expenseId, res) {
+    if (!expenseId) {
+        util.error(res, 'Expense id not provided', ExpenseErrorCodes.EXPENSE_UPDATE_FAILED)
+        return
+    }
+
+    const [result] = await connection.query(
+        `
+            DELETE FROM Expense WHERE id = ?;
+        `,
+        [expenseId]
+    )
+
+    if (result.affectedRows) {
+        res.status(200).json({ message: 'deleted' })
+        return
+    } else {
+        util.error(res, 'Expense could not be deleted', ExpenseErrorCodes.EXPENSE_UPDATE_FAILED)
+    }
+}

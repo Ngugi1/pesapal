@@ -119,3 +119,42 @@ module.exports.list = async function(connection, shopId, fromTs, toTs, res) {
     )
     res.json(rows)
 }
+
+module.exports.remove = async function(connection, saleId, res) {
+    if (!saleId) {
+        util.error(res, 'Sale id not provided', SaleErrorCodes.SALE_UPDATE_FAILED)
+        return
+    }
+
+    const [rows] = await connection.query(
+        `
+            SELECT shop_id, product_id, quantity
+            FROM Sale
+            WHERE id = ?;
+        `,
+        [saleId]
+    )
+
+    if (!rows?.length) {
+        util.error(res, 'Sale could not be deleted', SaleErrorCodes.SALE_UPDATE_FAILED)
+        return
+    }
+
+    const saleRow = rows[0]
+    if (saleRow.product_id) {
+        await catalog.adjustStock(connection, saleRow.shop_id, saleRow.product_id, Number(saleRow.quantity) || 0)
+    }
+
+    const [result] = await connection.query(
+        `
+            DELETE FROM Sale WHERE id = ?;
+        `,
+        [saleId]
+    )
+
+    if (result.affectedRows) {
+        res.send({ message: 'deleted' })
+    } else {
+        util.error(res, 'Sale could not be deleted', SaleErrorCodes.SALE_UPDATE_FAILED)
+    }
+}
