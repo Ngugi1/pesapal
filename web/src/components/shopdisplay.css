@@ -1,6 +1,6 @@
 .shop-page {
   width: 100%;
-  max-width: 1040px;
+  max-width: 1360px;
   margin: 0 auto;
   display: grid;
   justify-items: center;
@@ -12,7 +12,7 @@
   flex-direction: column;
   width: 100%;
   min-height: 100dvh;
-  padding: 16px clamp(12px, 3vw, 24px) calc(132px + env(safe-area-inset-bottom));
+  padding: 2px clamp(12px, 3vw, 24px) calc(132px + env(safe-area-inset-bottom));
   gap: 28px;
   overflow-x: clip;
 }
@@ -34,7 +34,7 @@
 
 .overview-row {
   width: 100%;
-  max-width: 760px;
+  max-width: 860px;
   margin-left: auto;
   margin-right: auto;
   min-width: 0;
@@ -47,12 +47,12 @@
 
 .page-footer {
   width: 100%;
-  max-width: 760px;
+  max-width: 860px;
   margin: auto auto 0;
-  padding-top: 12px;
+  padding-top: 20px;
   display: grid;
   justify-items: center;
-  gap: 4px;
+  gap: 6px;
   color: var(--muted);
 }
 
@@ -124,32 +124,22 @@
 
 .app-badge {
   position: relative;
-  display: inline-flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  gap: 14px;
-  padding: 16px 24px;
-  border-radius: 28px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.38));
-  border: 1px solid rgba(255, 255, 255, 0.82);
+  gap: 18px;
+  padding: 22px 26px;
+  border-radius: 30px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(240, 246, 255, 0.84));
+  border: 1px solid rgba(255, 255, 255, 0.92);
   box-shadow:
-    0 18px 34px rgba(107, 143, 201, 0.16),
+    0 24px 40px rgba(107, 143, 201, 0.14),
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  justify-self: center;
+  justify-self: stretch;
   margin: 0;
-  width: min(100%, 720px);
+  width: 100%;
   max-width: calc(100% - 2px);
   overflow: hidden;
-}
-
-.app-badge-orbit {
-  position: absolute;
-  left: -14px;
-  bottom: -14px;
-  width: 46px;
-  height: 46px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(79, 177, 255, 0.34), transparent 72%);
-  pointer-events: none;
 }
 
 .app-badge-mark {
@@ -174,30 +164,17 @@
 
 .app-badge-copy {
   display: grid;
-  gap: 5px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px 18px;
   line-height: 1.1;
-  text-align: center;
-  justify-items: center;
+  text-align: left;
+  justify-items: start;
+  align-items: center;
   width: 100%;
 }
 
-.header-flag-gif {
-  position: absolute;
-  right: -6px;
-  top: -6px;
-  width: clamp(14px, 4vw, 18px);
-  height: clamp(14px, 4vw, 18px);
-  object-fit: cover;
-  display: block;
-  border-radius: 999px;
-  opacity: 0.96;
-  box-shadow:
-    0 4px 8px rgba(10, 27, 46, 0.16),
-    0 0 0 2px rgba(255, 255, 255, 0.92);
-}
-
 .app-badge-label {
-  font-size: 1rem;
+  font-size: clamp(1rem, 1.1vw, 1.15rem);
   font-weight: 900;
   color: var(--ink);
   letter-spacing: 0.03em;
@@ -213,7 +190,7 @@
 }
 
 .app-badge-shopline {
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -227,11 +204,39 @@
 
 .profit-panel {
   display: grid;
-  justify-items: center;
-  gap: 4px;
-  width: min(100%, 320px);
-  margin-top: 6px;
-  padding: 2px 0 0;
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  justify-items: end;
+  gap: 8px;
+  width: min(100%, 360px);
+  margin-top: 0;
+  padding: 0;
+  align-self: center;
+}
+
+.profit-panel-top {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  width: 100%;
+}
+
+.header-clock {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 2px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.header-clock i {
+  font-size: 0.72rem;
+  color: rgba(72, 96, 134, 0.9);
 }
 
 .profit-label {
@@ -243,10 +248,13 @@
 }
 
 .profit-value {
-  font-size: clamp(1.8rem, 6vw, 2.8rem);
-  font-weight: 900;
+  font-size: clamp(1.18rem, 2.4vw, 1.7rem);
+  font-weight: 700;
   line-height: 1;
-  letter-spacing: -0.03em;
+  letter-spacing: 0.01em;
+  font-family: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  padding-inline: 2px;
+  margin-top: 4px;
 }
 
 .profit-value.positive {
@@ -277,31 +285,9 @@
 
 .sticky-brand-strip {
   position: sticky;
-  top: 8px;
+  top: 0;
   z-index: 20;
-  padding: 8px 0 12px;
-}
-
-.sticky-brand-strip::before {
-  content: "";
-  position: absolute;
-  inset: 0 -18px;
-  border-radius: 28px;
-  background:
-    linear-gradient(180deg, rgba(244, 249, 255, 0.94), rgba(244, 249, 255, 0.72)),
-    radial-gradient(circle at top, rgba(255, 255, 255, 0.38), transparent 72%);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  box-shadow:
-    0 18px 34px rgba(9, 35, 77, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(18px) saturate(1.15);
-  -webkit-backdrop-filter: blur(18px) saturate(1.15);
-  pointer-events: none;
-}
-
-.sticky-brand-strip > * {
-  position: relative;
-  z-index: 1;
+  padding: 0 0 6px;
 }
 
 .brand-title {
@@ -399,44 +385,73 @@
 
 .period-strip {
   width: 100%;
-  max-width: 760px;
-  margin: 0 auto;
+  max-width: 860px;
+  margin: 0;
   display: flex;
-  justify-content: center;
+  justify-content: flex-end;
   align-items: center;
-  gap: 12px;
+  gap: 4px;
   flex-wrap: wrap;
 }
 
 .detail-period-strip {
-  margin-top: 6px;
-}
-
-.period-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.64);
-  border: 1px solid rgba(255, 255, 255, 0.88);
-  box-shadow: 0 12px 24px rgba(9, 35, 77, 0.08);
-  backdrop-filter: blur(14px);
-}
-
-.period-chip-label {
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted);
+  margin-top: 2px;
 }
 
 .period-select {
   width: auto;
-  min-width: 128px;
-  height: 34px;
-  box-shadow: none;
+  min-width: 92px;
+  height: 30px;
+  padding: 0 30px 0 10px;
+  box-shadow:
+    0 8px 18px rgba(92, 121, 164, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.88);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(232, 240, 252, 0.96));
+  border-color: rgba(170, 187, 213, 0.92);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ink);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, rgba(72, 96, 134, 0.92) 50%),
+    linear-gradient(135deg, rgba(72, 96, 134, 0.92) 50%, transparent 50%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(232, 240, 252, 0.96));
+  background-position:
+    calc(100% - 14px) 12px,
+    calc(100% - 9px) 12px,
+    0 0;
+  background-size:
+    5px 5px,
+    5px 5px,
+    100% 100%;
+  background-repeat: no-repeat;
+}
+
+.header-period-select {
+  min-width: 82px;
+  height: 28px;
+  padding: 0 34px 0 10px;
+  font-size: 0.74rem;
+  border-radius: 999px;
+}
+
+.header-period-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.period-select-caret {
+  position: absolute;
+  right: 11px;
+  top: 50%;
+  transform: translateY(-46%);
+  font-size: 0.65rem;
+  color: rgba(72, 96, 134, 0.96);
+  pointer-events: none;
 }
 
 .stock-row {
@@ -493,9 +508,9 @@
 
 .overview-card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 248px));
-  justify-content: center;
-  gap: 18px 14px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  justify-content: stretch;
+  gap: 18px 16px;
   padding-top: 6px;
   width: 100%;
   align-items: start;
@@ -508,7 +523,7 @@
     "sales sales"
     "debt stock"
     "expenses catalog";
-  gap: 14px 10px;
+  gap: 14px 12px;
 }
 
 .tile-sales {
@@ -541,28 +556,19 @@
 
 @media (min-width: 720px) {
   .arranged-grid {
-    grid-template-columns: repeat(2, minmax(220px, 248px));
-    justify-content: center;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    justify-content: stretch;
     gap: 16px;
-  }
-
-  .tile-sales {
-    justify-self: center;
-    width: min(248px, 100%);
-  }
-
-  .tile-stock {
-    width: 100%;
   }
 }
 
 @media (min-width: 980px) {
   .overview-row {
-    max-width: 1040px;
+    max-width: 1200px;
   }
 
   .page-footer {
-    max-width: 1040px;
+    max-width: 1200px;
   }
 
   .stock-row {
@@ -585,7 +591,20 @@
   .debt-inline-zone,
   .panel,
   .period-strip {
-    max-width: 960px;
+    max-width: 1120px;
+  }
+
+  .arranged-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-areas:
+      "sales sales debt stock"
+      "sales sales expenses catalog";
+    align-items: stretch;
+  }
+
+  .tile-sales {
+    min-height: 100%;
+    max-height: none;
   }
 }
 
@@ -598,13 +617,25 @@
   gap: 8px;
   grid-template-rows: auto auto auto 1fr;
   min-width: 0;
-  min-height: 178px;
-  max-height: 178px;
+  min-height: 164px;
+  max-height: 164px;
   box-shadow:
     0 12px 26px rgba(109, 144, 194, 0.14),
     inset 0 1px 0 rgba(255, 255, 255, 0.95);
   align-content: start;
   overflow: hidden;
+}
+
+.footer-flag {
+  width: clamp(52px, 7vw, 84px);
+  height: clamp(52px, 7vw, 84px);
+  object-fit: cover;
+  display: block;
+  margin-top: 10px;
+  border-radius: 999px;
+  box-shadow:
+    0 10px 24px rgba(10, 27, 46, 0.14),
+    0 0 0 4px rgba(255, 255, 255, 0.74);
 }
 
 .sales-card .stat-label,
@@ -861,7 +892,14 @@
 
 .detail-app-badge {
   margin: 0;
+  width: auto;
   justify-self: center;
+}
+
+.detail-app-badge .app-badge-copy {
+  grid-template-columns: 1fr;
+  justify-items: center;
+  text-align: center;
 }
 
 .region-title {
@@ -1907,7 +1945,7 @@
 
 @media (max-width: 720px) {
   .home-page {
-    padding: 10px 12px calc(128px + env(safe-area-inset-bottom));
+    padding: 4px 12px calc(128px + env(safe-area-inset-bottom));
     gap: 18px;
   }
 
@@ -1943,12 +1981,42 @@
     gap: 12px;
   }
 
-  .mini-stat-card {
-    padding: 10px;
-    border-radius: 12px;
+  .app-badge {
+    grid-template-columns: auto 1fr;
+    gap: 12px;
+    padding: 16px 18px;
+    border-radius: 24px;
+  }
+
+  .app-badge-copy {
+    grid-template-columns: 1fr;
+    gap: 5px;
+  }
+
+  .profit-panel {
+    grid-column: 1;
+    grid-row: auto;
+    width: 100%;
+    justify-items: start;
+    margin-top: 4px;
     gap: 6px;
-    min-height: 164px;
-    max-height: 164px;
+  }
+
+  .profit-panel-top {
+    justify-content: flex-start;
+    gap: 6px;
+  }
+
+  .profit-value {
+    font-size: 1.05rem;
+  }
+
+  .mini-stat-card {
+    padding: 9px;
+    border-radius: 12px;
+    gap: 5px;
+    min-height: 144px;
+    max-height: 144px;
   }
 
   .overview-card-grid {
@@ -1984,6 +2052,17 @@
   .compact-select {
     height: 34px;
     padding: 0 12px;
+  }
+
+  .period-strip {
+    justify-content: flex-start;
+  }
+
+  .period-select {
+    min-width: 96px;
+    height: 30px;
+    padding: 0 24px 0 9px;
+    font-size: 0.78rem;
   }
 
   .detail-add-button {
@@ -2123,7 +2202,20 @@
 
   .app-badge {
     gap: 8px;
-    padding: 5px 8px;
+    padding: 10px 12px;
+  }
+
+  .app-badge-copy {
+    gap: 4px;
+  }
+
+  .profit-value {
+    font-size: 0.98rem;
+  }
+
+  .period-select {
+    min-width: 92px;
+    font-size: 0.74rem;
   }
 
   .brand-hero {
@@ -2166,8 +2258,8 @@
     padding: 8px;
     gap: 5px;
     border-radius: 10px;
-    min-height: 152px;
-    max-height: 152px;
+    min-height: 136px;
+    max-height: 136px;
   }
 
   .mini-stat-icon {

@@ -171,6 +171,9 @@ export function ShopDisplay() {
         catalog: 12,
         stock: 12
     })
+    const [headerTime, setHeaderTime] = useState(() =>
+        new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    )
     const detailListRef = useRef<HTMLDivElement | null>(null)
     const shopId = shop?.shop_id ?? shop?.id
     const needsSetup = !shopId
@@ -178,6 +181,17 @@ export function ShopDisplay() {
     const [showScrollTop, setShowScrollTop] = useState(false)
     const currentYear = new Date().getFullYear()
     const isEditingDebt = editingDebtId !== null
+
+    useEffect(() => {
+        const updateHeaderTime = () => {
+            setHeaderTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
+        }
+
+        updateHeaderTime()
+        const timer = window.setInterval(updateHeaderTime, 30000)
+
+        return () => window.clearInterval(timer)
+    }, [])
     const isEditingSale = editingSaleId !== null
     const isEditingExpense = editingExpenseId !== null
     const isEditingCatalog = editingCatalogProductId !== null
@@ -1096,33 +1110,39 @@ export function ShopDisplay() {
             <>
                 <div className="brand-strip overview-row sticky-brand-strip">
                     <div className="app-badge">
-                        <span className="app-badge-orbit" aria-hidden="true" />
                         <div className="app-badge-mark">
                             <i className="fa-solid fa-book app-badge-icon" aria-hidden="true" />
-                            <img className="header-flag-gif" src={kenyaFlagGif} alt="Kenya flag" />
                         </div>
                         <div className="app-badge-copy">
                             <span className="app-badge-label">Kitabu <span className="app-badge-motto">cha deni</span></span>
                             <span className="app-badge-shopline">{appBadgeShopName}</span>
                             <div className={`profit-panel ${performanceDelta >= 0 ? 'positive' : 'negative'}`}>
-                                <span className="profit-label">Profit</span>
+                                <div className="profit-panel-top">
+                                    <div className="header-period-wrap">
+                                        <select
+                                            className="compact-select period-select header-period-select"
+                                            aria-label="Select period"
+                                            value={period}
+                                            onChange={(e) => setPeriod(e.target.value)}
+                                        >
+                                            <option value="day">Daily</option>
+                                            <option value="week">Weekly</option>
+                                            <option value="month">Monthly</option>
+                                            <option value="year">Yearly</option>
+                                            <option value="custom">Custom</option>
+                                        </select>
+                                        <i className="fa-solid fa-chevron-down period-select-caret" aria-hidden="true" />
+                                    </div>
+                                    <span className="header-clock" aria-label={`Current time ${headerTime}`}>
+                                        <i className="fa-regular fa-clock" aria-hidden="true" />
+                                        <span>{headerTime}</span>
+                                    </span>
+                                </div>
                                 <span className={`profit-value ${performanceDelta >= 0 ? 'positive' : 'negative'}`}>
                                     {performanceDelta >= 0 ? '+' : '-'}{formatMoney(Math.abs(performanceDelta))}
                                 </span>
                             </div>
                         </div>
-                    </div>
-                </div>
-                <div className="period-strip overview-row">
-                    <div className="period-pill">
-                        <span className="period-chip-label">Period</span>
-                        <select className="compact-select period-select" value={period} onChange={(e) => setPeriod(e.target.value)}>
-                            <option value="day">Daily</option>
-                            <option value="week">Weekly</option>
-                            <option value="month">Monthly</option>
-                            <option value="year">Yearly</option>
-                            <option value="custom">Custom</option>
-                        </select>
                     </div>
                 </div>
                 {period === 'custom' && (
@@ -1452,21 +1472,24 @@ export function ShopDisplay() {
             <button className="footer-logout-link" type="button" onClick={logout}>
                 Log out
             </button>
+            <img className="footer-flag" src={kenyaFlagGif} alt="Kenya flag" />
         </div>
     )
 
     const detailPeriodBar = (
         <div className="period-strip detail-period-strip">
-            <div className="period-pill">
-                <span className="period-chip-label">Period</span>
-                <select className="compact-select period-select" value={period} onChange={(e) => setPeriod(e.target.value)}>
-                    <option value="day">Daily</option>
-                    <option value="week">Weekly</option>
-                    <option value="month">Monthly</option>
-                    <option value="year">Yearly</option>
-                    <option value="custom">Custom</option>
-                </select>
-            </div>
+            <select
+                className="compact-select period-select"
+                aria-label="Select period"
+                value={period}
+                onChange={(e) => setPeriod(e.target.value)}
+            >
+                <option value="day">Daily</option>
+                <option value="week">Weekly</option>
+                <option value="month">Monthly</option>
+                <option value="year">Yearly</option>
+                <option value="custom">Custom</option>
+            </select>
         </div>
     )
 
