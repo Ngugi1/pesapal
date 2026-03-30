@@ -1,4 +1,4 @@
-USE kitabudb;
+USE pesapaldb;
 CREATE TABLE User(id INT PRIMARY KEY AUTO_INCREMENT, -- auto -indexed
                     fname VARCHAR(100) NOT NULL, 
                     lname VARCHAR(100) NOT NULL, 
@@ -31,6 +31,8 @@ DESC Product;
 CREATE TABLE Catalog(id INT PRIMARY KEY AUTO_INCREMENT, 
                         shop_id INT NOT NULL, 
                         product_id INT NOT NULL,
+                        stock_quantity INT NOT NULL DEFAULT 0,
+                        default_unit_price DECIMAL(10,2) NOT NULL DEFAULT 0,
                         FOREIGN KEY (shop_id) REFERENCES Shop(id),
                         FOREIGN KEY (product_id) REFERENCES Product(id),
                         INDEX idx_shop_product_ids (shop_id, product_id), -- composite index
@@ -134,15 +136,15 @@ VALUES  (1, 2, 2, 2, 10, "Peter Njenga 0721234568"),
         (2, 3, 3, 1, 40, "One Man 0712345566");
 
 -- Build catalog for our only available shop (id = 1) ---
-INSERT INTO Catalog (shop_id, product_id) 
-VALUES  (1, 1),
-        (1, 2),
-        (1, 3),
-        (1, 4),
-        (2, 1),
-        (2, 2),
-        (2, 3),
-        (2, 4);
+INSERT INTO Catalog (shop_id, product_id, stock_quantity, default_unit_price) 
+VALUES  (1, 1, 20, 12),
+        (1, 2, 16, 18),
+        (1, 3, 12, 25),
+        (1, 4, 8, 30),
+        (2, 1, 24, 14),
+        (2, 2, 18, 22),
+        (2, 3, 10, 25),
+        (2, 4, 6, 35);
 
 -- Link existing users as customers for shops ---
 INSERT INTO ShopCustomer (shop_id, user_id)
@@ -247,8 +249,6 @@ WHERE id = 5; -- Parameterize this in nodejs
 
 -- Lets remove a catalog item that is no longer stocked by a shop
 DELETE FROM Catalog WHERE shop_id=1 AND product_id=2;
-
-
 
 
 

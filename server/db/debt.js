@@ -41,6 +41,61 @@ module.exports.create = async function(connection, debt, res) {
     }
 }
 
+module.exports.update = async function(connection, debtId, debt, res) {
+    if (!debtId || !debt) {
+        util.error(res, "Debt item not provided", DebtErrorCodes.DEBT_DATA_NOT_PROVIDED)
+        return
+    }
+
+    const [settlements] = await connection.query(
+        `
+            SELECT COUNT(*) AS count
+            FROM Settlement
+            WHERE debt_id = ?;
+        `,
+        [debtId]
+    )
+
+    if ((settlements?.[0]?.count ?? 0) > 0) {
+        util.error(res, "Settled debts cannot be edited", DebtErrorCodes.DEBT_UPDATE_FAILED)
+        return
+    }
+
+    const [records] = await connection.query(
+        `
+            SELECT forgiven
+            FROM Debt
+            WHERE id = ?;
+        `,
+        [debtId]
+    )
+
+    if (!records?.length || records[0].forgiven) {
+        util.error(res, "Forgiven debts cannot be edited", DebtErrorCodes.DEBT_UPDATE_FAILED)
+        return
+    }
+
+    const columns = [
+        "product_id",
+        "quantity",
+        "unit_price",
+        "comments"
+    ]
+    const values = [
+        debt.product_id,
+        debt.quantity,
+        debt.unit_price,
+        debt.comments ?? ''
+    ]
+
+    const result = await util.updateById(connection, "Debt", debtId, columns, values)
+    if (result.affectedRows) {
+        res.send({ id: Number(debtId), ...debt, comments: debt.comments ?? '' })
+    } else {
+        util.error(res, "Debt item could not be updated", DebtErrorCodes.DEBT_UPDATE_FAILED)
+    }
+}
+
 module.exports.settle = async function(connection, debtId, res) {
     
 }
@@ -62,12 +117,43 @@ module.exports.forgive = async function(connection, debtId, res) {
    
 }
 
+module.exports.remove = async function(connection, debtId, res) {
+    const [settlements] = await connection.query(
+        `
+            SELECT COUNT(*) AS count
+            FROM Settlement
+            WHERE debt_id = ?;
+        `,
+        [debtId]
+    )
+
+    if ((settlements?.[0]?.count ?? 0) > 0) {
+        util.error(res, "Settled debts cannot be deleted", DebtErrorCodes.DEBT_DELETE_FAILED)
+        return
+    }
+
+    const [header] = await connection.query(
+        `
+            DELETE FROM Debt
+            WHERE id = ?;
+        `,
+        [debtId]
+    )
+
+    if (header.affectedRows) {
+        res.send({ message: "deleted" })
+    } else {
+        util.error(res, "Debt item could not be deleted", DebtErrorCodes.DEBT_DELETE_FAILED)
+    }
+}
+
 module.exports.getAll = async function(connection, shopId, fromTs, toTs, res) {
     const range = normalizeRange(fromTs, toTs)
     const [results] = await connection.query(
         `
             SELECT
                 d.id,
+                d.product_id,
                 u.id as debtor_user_id,
                 TRIM(CONCAT(COALESCE(u.fname, ''), ' ', COALESCE(u.lname, ''))) as debtor,
                 u.phone as debtor_phone,
@@ -100,6 +186,7 @@ module.exports.listAll = async function(connection, shopId, fromTs, toTs, res) {
         `
             SELECT
                 d.id,
+                d.product_id,
                 TRIM(CONCAT(COALESCE(u.fname, ''), ' ', COALESCE(u.lname, ''))) as debtor,
                 u.phone as debtor_phone,
                 d.comments,

@@ -29,6 +29,28 @@ module.exports.create = async function(connection, expense, res) {
     }
 }
 
+module.exports.update = async function(connection, expenseId, expense, res) {
+    if (!expenseId || !expense) {
+        util.error(res, 'Expense data not provided', ExpenseErrorCodes.EXPENSE_DATA_NOT_PROVIDED)
+        return
+    }
+
+    const columns = ['category', 'amount', 'expense_date', 'notes']
+    const values = [
+        expense.category,
+        expense.amount,
+        sanitizeTimestamp(expense.expense_date),
+        expense.notes ?? ''
+    ]
+
+    const result = await util.updateById(connection, 'Expense', expenseId, columns, values)
+    if (result.affectedRows) {
+        res.send({ id: Number(expenseId), ...expense, expense_date: values[2], notes: values[3] })
+    } else {
+        util.error(res, 'Expense could not be updated', ExpenseErrorCodes.EXPENSE_UPDATE_FAILED)
+    }
+}
+
 module.exports.list = async function(connection, shopId, fromTs, toTs, res) {
     const [rows] = await connection.query(
         `

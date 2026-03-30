@@ -5,6 +5,7 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_APP_BASE_PATH: /kitabu/
+        VITE_APP_START_URL: http://158.220.86.151/kitabu
     restart: unless-stopped
     depends_on:
       - server
@@ -50,4 +51,3 @@ networks:
   autogarage-network:
     external: true
     name: autogarage_autogarage-network
-

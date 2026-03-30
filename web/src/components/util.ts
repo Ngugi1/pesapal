@@ -14,8 +14,16 @@ export function apiUrl(path: string) {
 }
 
 export async function post<TBody>(url: string, body: TBody) {
+    return sendJson('POST', url, body)
+}
+
+export async function put<TBody>(url: string, body: TBody) {
+    return sendJson('PUT', url, body)
+}
+
+async function sendJson<TBody>(method: 'POST' | 'PUT', url: string, body: TBody) {
     const res = await fetch(url, {
-        method: 'POST',
+        method,
         headers: {
             'Content-Type': 'application/json'
         },

@@ -17,7 +17,9 @@ createRoot(document.getElementById('root')!).render(
 
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register(serviceWorkerUrl).catch(() => {
+    navigator.serviceWorker.register(serviceWorkerUrl, {
+      scope: import.meta.env.BASE_URL,
+    }).catch(() => {
       // Best effort registration for installability and offline shell caching.
     })
   })

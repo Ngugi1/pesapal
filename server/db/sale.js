@@ -1,5 +1,6 @@
 const util = require('./util')
 const { SaleErrorCodes } = require('./errors')
+const catalog = require('./catalog')
 
 function sanitizeTimestamp(value) {
     const parsed = Number(value)
@@ -12,11 +13,20 @@ module.exports.create = async function(connection, sale, res) {
         return
     }
 
+    const quantity = Number(sale.quantity ?? 1)
+    if (sale.product_id) {
+        const stockResult = await catalog.adjustStock(connection, sale.shop_id, sale.product_id, -quantity)
+        if (!stockResult.affectedRows) {
+            util.error(res, 'Not enough stock for this sale', SaleErrorCodes.SALE_CREATE_FAILED)
+            return
+        }
+    }
+
     const columns = ['shop_id', 'product_id', 'quantity', 'unit_price', 'sale_date', 'notes']
     const values = [
         sale.shop_id,
         sale.product_id ?? null,
-        sale.quantity ?? 1,
+        quantity,
         sale.unit_price,
         sanitizeTimestamp(sale.sale_date),
         sale.notes ?? ''
@@ -27,6 +37,62 @@ module.exports.create = async function(connection, sale, res) {
         res.send({ id: result.insertId, ...sale, sale_date: values[4], notes: values[5] })
     } else {
         util.error(res, 'Sale could not be created', SaleErrorCodes.SALE_CREATE_FAILED)
+    }
+}
+
+module.exports.update = async function(connection, saleId, sale, res) {
+    if (!saleId || !sale) {
+        util.error(res, 'Sale data not provided', SaleErrorCodes.SALE_DATA_NOT_PROVIDED)
+        return
+    }
+
+    const [rows] = await connection.query(
+        `
+            SELECT shop_id, product_id, quantity
+            FROM Sale
+            WHERE id = ?;
+        `,
+        [saleId]
+    )
+
+    if (!rows?.length) {
+        util.error(res, 'Sale could not be updated', SaleErrorCodes.SALE_UPDATE_FAILED)
+        return
+    }
+
+    const existing = rows[0]
+    const nextProductId = sale.product_id ?? null
+    const nextQuantity = Number(sale.quantity ?? 1)
+
+    if (existing.product_id && (existing.product_id !== nextProductId || Number(existing.quantity) !== nextQuantity)) {
+        await catalog.adjustStock(connection, existing.shop_id, existing.product_id, Number(existing.quantity))
+    }
+
+    if (nextProductId) {
+        const stockResult = await catalog.adjustStock(connection, existing.shop_id, nextProductId, -nextQuantity)
+        if (!stockResult.affectedRows) {
+            if (existing.product_id && (existing.product_id !== nextProductId || Number(existing.quantity) !== nextQuantity)) {
+                await catalog.adjustStock(connection, existing.shop_id, existing.product_id, -Number(existing.quantity))
+            }
+            util.error(res, 'Not enough stock for this sale', SaleErrorCodes.SALE_UPDATE_FAILED)
+            return
+        }
+    }
+
+    const columns = ['product_id', 'quantity', 'unit_price', 'sale_date', 'notes']
+    const values = [
+        nextProductId,
+        nextQuantity,
+        sale.unit_price,
+        sanitizeTimestamp(sale.sale_date),
+        sale.notes ?? ''
+    ]
+
+    const result = await util.updateById(connection, 'Sale', saleId, columns, values)
+    if (result.affectedRows) {
+        res.send({ id: Number(saleId), ...sale, sale_date: values[3], notes: values[4] })
+    } else {
+        util.error(res, 'Sale could not be updated', SaleErrorCodes.SALE_UPDATE_FAILED)
     }
 }
 

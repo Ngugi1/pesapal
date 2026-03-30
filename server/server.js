@@ -13,6 +13,7 @@ const shopCustomer = require('./db/shopCustomer')
 const sale = require('./db/sale')
 const expense = require('./db/expense')
 const overview = require('./db/overview')
+const schema = require('./db/schema')
 let dbConnection = null
 // Init server
 let app = express()
@@ -26,6 +27,7 @@ async function startServer() {
     // Use a pool so dropped MySQL sockets do not break every future request.
     try{
         dbConnection = await connector()
+        await schema.ensure(dbConnection)
         app.listen(app.port, '0.0.0.0', () => {
             console.log(`Server running at http://0.0.0.0:${app.port}`);
         });
@@ -97,6 +99,10 @@ app.post('/product/create', async (req, res) => {
     await product.create(dbConnection, req.body, res)
 })
 
+app.put('/product/update/:id', async (req, res) => {
+    await product.update(dbConnection, req.params.id, req.body, res)
+})
+
 app.get('/product/all', async (_req, res) => {
     await product.getAll(dbConnection, res)
 })
@@ -104,6 +110,10 @@ app.get('/product/all', async (_req, res) => {
 // Create a catalog for a shop
 app.post('/catalog/create', async (req, res) => {
     await catalog.create(dbConnection, req.body, res)
+})
+
+app.put('/catalog/update/:id', async (req, res) => {
+    await catalog.update(dbConnection, req.params.id, req.body, res)
 })
 
 
@@ -140,6 +150,14 @@ app.post('/debt/create', async (req, res) => {
     await debt.create(dbConnection, req.body, res)
 })
 
+app.put('/debt/update/:id', async (req, res) => {
+    await debt.update(dbConnection, req.params.id, req.body, res)
+})
+
+app.delete('/debt/remove/:id', async (req, res) => {
+    await debt.remove(dbConnection, req.params.id, res)
+})
+
 // Forgive debt
 app.post('/debt/forgive/:id', async (req, res) => {
     await debt.forgive(dbConnection, req.params.id, res) 
@@ -154,6 +172,10 @@ app.post('/sale/create', async (req, res) => {
     await sale.create(dbConnection, req.body, res)
 })
 
+app.put('/sale/update/:id', async (req, res) => {
+    await sale.update(dbConnection, req.params.id, req.body, res)
+})
+
 app.get('/sale/list/:shop_id', async (req, res) => {
     const range = parseDateRange(req)
     await sale.list(dbConnection, req.params.shop_id, range.from, range.to, res)
@@ -161,6 +183,10 @@ app.get('/sale/list/:shop_id', async (req, res) => {
 
 app.post('/expense/create', async (req, res) => {
     await expense.create(dbConnection, req.body, res)
+})
+
+app.put('/expense/update/:id', async (req, res) => {
+    await expense.update(dbConnection, req.params.id, req.body, res)
 })
 
 app.get('/expense/list/:shop_id', async (req, res) => {
