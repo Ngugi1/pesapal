@@ -82,7 +82,7 @@ location /api/ {
   `docker compose -f compose.prod.yaml ps`
 
 ## Database backups outside Docker
-- Use `./scripts/backup-db.sh` to create a compressed MySQL dump on the host machine at `./backups/mysql/`.
+- Use `./scripts/backup-db.sh` to create a compressed MySQL dump on the host machine outside the repo by default, at `~/kitabu-backups/mysql/`.
 - The script reads `.env`, connects to the running `db` service from `compose.prod.yaml`, writes a timestamped `.sql.gz` file, and deletes backups older than 14 days by default.
 - Make the script executable once:
   `chmod +x ./scripts/backup-db.sh`
@@ -109,7 +109,6 @@ The visual web application can be accessed via link: http://localhost:5173/
 
 ## Notes
 Please note that due to limited time, some areas of the app especially on the front-end were done in a hurry and thus the quality may not be as great.
-
 
 
 

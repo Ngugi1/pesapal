@@ -5,7 +5,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_FILE="${ENV_FILE:-$ROOT_DIR/.env}"
 COMPOSE_FILE="${COMPOSE_FILE:-$ROOT_DIR/compose.prod.yaml}"
-BACKUP_DIR="${BACKUP_DIR:-$ROOT_DIR/backups/mysql}"
+DEFAULT_BACKUP_ROOT="${HOME:-/tmp}/kitabu-backups/mysql"
+BACKUP_DIR="${BACKUP_DIR:-$DEFAULT_BACKUP_ROOT}"
 RETENTION_DAYS="${RETENTION_DAYS:-14}"
 TIMESTAMP="$(date +"%Y-%m-%d_%H-%M-%S")"
 
