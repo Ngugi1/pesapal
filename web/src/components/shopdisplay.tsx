@@ -1377,7 +1377,7 @@ export function ShopDisplay() {
                     <article className="mini-stat-card overview-tile sales-card tile-sales" onClick={() => setSelected(1)} role="button" tabIndex={0} onKeyDown={(e: KeyboardEvent<HTMLElement>) => { if (e.key === 'Enter' || e.key === ' ') setSelected(1) }}>
                         <div className="mini-stat-top">
                             <span className="mini-stat-icon positive">
-                                <i className="fa-solid fa-money-bill-trend-up" aria-hidden="true" />
+                                <i className="fa-solid fa-cash-register" aria-hidden="true" />
                             </span>
                             <button className="mini-add-button sale-add-button" type="button" onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); openModalForCreate('sale') }}>+</button>
                         </div>
@@ -1396,7 +1396,7 @@ export function ShopDisplay() {
                     <article className="mini-stat-card overview-tile expenses-card tile-expenses" onClick={() => setSelected(2)} role="button" tabIndex={0} onKeyDown={(e: KeyboardEvent<HTMLElement>) => { if (e.key === 'Enter' || e.key === ' ') setSelected(2) }}>
                         <div className="mini-stat-top">
                             <span className="mini-stat-icon warning">
-                                <i className="fa-solid fa-money-bill-transfer" aria-hidden="true" />
+                                <i className="fa-solid fa-receipt" aria-hidden="true" />
                             </span>
                             <button className="mini-add-button expense-add-button" type="button" onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); openModalForCreate('expense') }}>+</button>
                         </div>
@@ -1415,7 +1415,7 @@ export function ShopDisplay() {
                     <article className="mini-stat-card overview-tile debt-card-overview tile-debt" onClick={() => setSelected(0)} role="button" tabIndex={0} onKeyDown={(e: KeyboardEvent<HTMLElement>) => { if (e.key === 'Enter' || e.key === ' ') setSelected(0) }}>
                         <div className="mini-stat-top">
                             <span className="mini-stat-icon neutral">
-                                <i className="fa-solid fa-file-invoice-dollar" aria-hidden="true" />
+                                <i className="fa-solid fa-hand-holding-dollar" aria-hidden="true" />
                             </span>
                             <button className="mini-add-button debt-add-button" type="button" onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); openModalForCreate('debt') }}>+</button>
                         </div>
@@ -1434,7 +1434,7 @@ export function ShopDisplay() {
                     <article className="mini-stat-card overview-tile catalog-card tile-catalog" onClick={() => setSelected(3)} role="button" tabIndex={0} onKeyDown={(e: KeyboardEvent<HTMLElement>) => { if (e.key === 'Enter' || e.key === ' ') setSelected(3) }}>
                         <div className="mini-stat-top">
                             <span className="mini-stat-icon catalog">
-                                <i className="fa-solid fa-box-open" aria-hidden="true" />
+                                <i className="fa-solid fa-tags" aria-hidden="true" />
                             </span>
                             <button className="mini-add-button catalog-add-button" type="button" onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); openModalForCreate('catalog') }}>+</button>
                         </div>
@@ -1453,7 +1453,7 @@ export function ShopDisplay() {
                     <article className="mini-stat-card overview-tile stock-card stock-card-center tile-stock" onClick={() => setSelected(4)} role="button" tabIndex={0} onKeyDown={(e: KeyboardEvent<HTMLElement>) => { if (e.key === 'Enter' || e.key === ' ') setSelected(4) }}>
                         <div className="mini-stat-top">
                             <span className="mini-stat-icon stock">
-                                <i className="fa-solid fa-layer-group" aria-hidden="true" />
+                                <i className="fa-solid fa-boxes-stacked" aria-hidden="true" />
                             </span>
                             <button className="mini-add-button stock-add-button" type="button" onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); openModalForCreate('stock') }}>+</button>
                         </div>
