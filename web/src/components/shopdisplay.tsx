@@ -87,7 +87,18 @@ type DetailSection = -1 | 0 | 1 | 2 | 3 | 4
 type UserCreateResponse = { id: number; existing?: boolean; error?: string }
 type ShopCreateResponse = { id: number; error?: string }
 type EntityCreateResponse = { id: number; error?: string }
+type ProductRow = { id: number; pname?: string; name?: string }
 type EditableModal = 'debt' | 'sale' | 'expense' | 'catalog' | 'stock'
+type PeriodOption = 'day' | 'week' | 'month' | 'year' | 'custom'
+
+const PERIOD_STORAGE_KEY = 'kitabu-period'
+const PERIOD_FROM_STORAGE_KEY = 'kitabu-period-custom-from'
+const PERIOD_TO_STORAGE_KEY = 'kitabu-period-custom-to'
+const PERIOD_OPTIONS: PeriodOption[] = ['day', 'week', 'month', 'year', 'custom']
+
+function isPeriodOption(value: string): value is PeriodOption {
+    return PERIOD_OPTIONS.includes(value as PeriodOption)
+}
 
 export function ShopDisplay() {
     const {state} = useLocation()
@@ -129,14 +140,21 @@ export function ShopDisplay() {
     })
     const [sales, setSales] = useState<SaleRecord[]>([])
     const [expenses, setExpenses] = useState<ExpenseRecord[]>([])
-    const getStoredPeriod = () => {
+    const getStoredPeriod = (): PeriodOption => {
         if (typeof window === 'undefined') return 'day'
-        const stored = window.localStorage.getItem('kitabu-period')
-        return stored ?? 'day'
+        const stored = window.localStorage.getItem(PERIOD_STORAGE_KEY) ?? ''
+        return isPeriodOption(stored) ? stored : 'day'
     }
-    const [period, setPeriod] = useState(getStoredPeriod)
-    const [customFrom, setCustomFrom] = useState('')
-    const [customTo, setCustomTo] = useState('')
+    const getStoredRange = (key: string) => {
+        if (typeof window === 'undefined') return ''
+        return window.localStorage.getItem(key) ?? ''
+    }
+    const [homePeriod, setHomePeriod] = useState<PeriodOption>(getStoredPeriod)
+    const [homeCustomFrom, setHomeCustomFrom] = useState(() => getStoredRange(PERIOD_FROM_STORAGE_KEY))
+    const [homeCustomTo, setHomeCustomTo] = useState(() => getStoredRange(PERIOD_TO_STORAGE_KEY))
+    const [detailPeriod, setDetailPeriod] = useState<PeriodOption>(getStoredPeriod)
+    const [detailCustomFrom, setDetailCustomFrom] = useState(() => getStoredRange(PERIOD_FROM_STORAGE_KEY))
+    const [detailCustomTo, setDetailCustomTo] = useState(() => getStoredRange(PERIOD_TO_STORAGE_KEY))
     const [saleStatus, setSaleStatus] = useState('')
     const [expenseStatus, setExpenseStatus] = useState('')
     const [catalogStatus, setCatalogStatus] = useState('')
@@ -153,6 +171,7 @@ export function ShopDisplay() {
         notes: ''
     })
     const [catalogForm, setCatalogForm] = useState({
+        product_id: '',
         name: '',
         description: '',
         stock_quantity: '0',
@@ -178,10 +197,8 @@ export function ShopDisplay() {
         catalog: 12,
         stock: 12
     })
-    const [headerTime, setHeaderTime] = useState(() =>
-        new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    )
     const detailListRef = useRef<HTMLDivElement | null>(null)
+    const previousSelectedRef = useRef<DetailSection>(-1)
     const shopId = shop?.shop_id ?? shop?.id
     const needsSetup = !shopId
     const displayShop = shop ?? { sname: 'Your Shop' }
@@ -190,19 +207,29 @@ export function ShopDisplay() {
     const isEditingDebt = editingDebtId !== null
 
     useEffect(() => {
-        const updateHeaderTime = () => {
-            setHeaderTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
-        }
+        if (typeof window === 'undefined') return
+        window.localStorage.setItem(PERIOD_STORAGE_KEY, homePeriod)
+    }, [homePeriod])
 
-        updateHeaderTime()
-        const timer = window.setInterval(updateHeaderTime, 30000)
-
-        return () => window.clearInterval(timer)
-    }, [])
     useEffect(() => {
         if (typeof window === 'undefined') return
-        window.localStorage.setItem('kitabu-period', period)
-    }, [period])
+        window.localStorage.setItem(PERIOD_FROM_STORAGE_KEY, homeCustomFrom)
+    }, [homeCustomFrom])
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return
+        window.localStorage.setItem(PERIOD_TO_STORAGE_KEY, homeCustomTo)
+    }, [homeCustomTo])
+
+    useEffect(() => {
+        const previousSelected = previousSelectedRef.current
+        if (previousSelected === -1 && selected !== -1) {
+            setDetailPeriod(homePeriod)
+            setDetailCustomFrom(homeCustomFrom)
+            setDetailCustomTo(homeCustomTo)
+        }
+        previousSelectedRef.current = selected
+    }, [selected, homePeriod, homeCustomFrom, homeCustomTo])
     const isEditingSale = editingSaleId !== null
     const isEditingExpense = editingExpenseId !== null
     const isEditingCatalog = editingCatalogProductId !== null
@@ -369,12 +396,16 @@ export function ShopDisplay() {
         return Math.floor(parsed / 1000)
     }
 
+    const activePeriod = selected === -1 ? homePeriod : detailPeriod
+    const activeCustomFrom = selected === -1 ? homeCustomFrom : detailCustomFrom
+    const activeCustomTo = selected === -1 ? homeCustomTo : detailCustomTo
+
     const getRange = () => {
         const now = new Date()
         const end = Math.floor(now.getTime() / 1000)
-        if (period === 'custom') {
-            const customStart = fromDateTimeInput(customFrom)
-            const customEnd = fromDateTimeInput(customTo)
+        if (activePeriod === 'custom') {
+            const customStart = fromDateTimeInput(activeCustomFrom)
+            const customEnd = fromDateTimeInput(activeCustomTo)
             return {
                 from: customStart ?? end - 86400,
                 to: customEnd ?? end
@@ -382,17 +413,17 @@ export function ShopDisplay() {
         }
 
         const start = new Date(now)
-        if (period === 'day') {
+        if (activePeriod === 'day') {
             start.setHours(0, 0, 0, 0)
-        } else if (period === 'week') {
+        } else if (activePeriod === 'week') {
             const day = start.getDay()
             const diff = day === 0 ? -6 : 1 - day
             start.setDate(start.getDate() + diff)
             start.setHours(0, 0, 0, 0)
-        } else if (period === 'month') {
+        } else if (activePeriod === 'month') {
             start.setDate(1)
             start.setHours(0, 0, 0, 0)
-        } else if (period === 'year') {
+        } else if (activePeriod === 'year') {
             start.setMonth(0, 1)
             start.setHours(0, 0, 0, 0)
         }
@@ -481,6 +512,7 @@ export function ShopDisplay() {
 
     const resetCatalogForm = () => {
         setCatalogForm({
+            product_id: '',
             name: '',
             description: '',
             stock_quantity: '0',
@@ -503,6 +535,16 @@ export function ShopDisplay() {
 
     const openModalForCreate = (modal: EditableModal) => {
         closeActionModal()
+        if (modal === 'stock') {
+            const firstCatalog = uniqueCatalog[0]
+            setCatalogForm({
+                product_id: firstCatalog ? String(firstCatalog.product_id) : '',
+                name: firstCatalog?.pname ?? '',
+                description: firstCatalog?.description ?? '',
+                stock_quantity: '0',
+                default_unit_price: firstCatalog?.default_unit_price ? String(firstCatalog.default_unit_price) : ''
+            })
+        }
         setActiveModal(modal)
     }
 
@@ -549,6 +591,7 @@ export function ShopDisplay() {
         setCatalogStatus('')
         setEditingCatalogProductId(item.product_id)
         setCatalogForm({
+            product_id: String(item.product_id),
             name: item.pname ?? '',
             description: item.description ?? '',
             stock_quantity: String(item.stock_quantity ?? 0),
@@ -582,7 +625,7 @@ export function ShopDisplay() {
 
     function loadDebts() {
         if (!shopId) return
-        fetch(apiUrl(`/debt/list/${shopId}?${queryString()}`)).then((value) => {
+        fetch(apiUrl(`/debt/list/${shopId}?${queryString()}`), { cache: 'no-store' }).then((value) => {
             if(value.status === 200) {
                 value.json().then((data) => {
                    setDebts(data)
@@ -593,7 +636,7 @@ export function ShopDisplay() {
 
     function loadOverview() {
         if (!shopId) return
-        fetch(apiUrl(`/overview/${shopId}?${queryString()}`)).then((res) => {
+        fetch(apiUrl(`/overview/${shopId}?${queryString()}`), { cache: 'no-store' }).then((res) => {
             if (res.status === 200) {
                 res.json().then((data) => {
                     setOverview(data)
@@ -622,7 +665,7 @@ export function ShopDisplay() {
 
     useEffect(() => {
         loadOverview()
-    }, [shopId, period, customFrom, customTo])
+    }, [shopId, activePeriod, activeCustomFrom, activeCustomTo])
 
     useEffect(() => {
         if(selected === -1) {
@@ -636,7 +679,7 @@ export function ShopDisplay() {
         }else if (selected === 2) {
             loadExpenses()
         }
-    }, [selected, shopId, period, customFrom, customTo])
+    }, [selected, shopId, activePeriod, activeCustomFrom, activeCustomTo])
 
     useEffect(() => {
         setDetailQuery('')
@@ -700,7 +743,7 @@ export function ShopDisplay() {
         if (!q) return true
         return `${item?.pname ?? ''} ${item?.description ?? ''}`.toLowerCase().includes(q)
     })
-    const filteredStock = filteredCatalog
+    const filteredStock = filteredCatalog.filter((item) => Number(item.stock_quantity ?? 0) > 0)
 
     const totalStockValue = uniqueCatalog.reduce((sum, item) => {
         const qty = Number(item.stock_quantity ?? 0)
@@ -758,7 +801,18 @@ export function ShopDisplay() {
     const visibleExpenses = filteredExpenses.slice(0, visibleCounts.expense)
     const visibleCatalog = filteredCatalog.slice(0, visibleCounts.catalog)
     const visibleStock = filteredStock.slice(0, visibleCounts.stock)
-    const lowStockCount = uniqueCatalog.filter((item) => Number(item.stock_quantity) <= 3).length
+    const lowStockCount = uniqueCatalog.filter((item) => {
+        const qty = Number(item.stock_quantity ?? 0)
+        return qty > 0 && qty <= 3
+    }).length
+    const dashboardOutstandingTotal = debts.reduce((sum, debtItem) => {
+        const isForgiven = debtItem.forgiven === true || Number(debtItem.forgiven) === 1
+        const isFull = Number(debtItem.full_settlement) === 1
+        if (isForgiven || isFull) return sum
+        const total = Number(debtItem.total_price ?? 0)
+        const paid = Number(debtItem.total_paid ?? 0)
+        return sum + Math.max(total - paid, 0)
+    }, 0)
     const healthTone = overview.net_flow < 0 ? 'performance-down' : 'performance-up'
     const performanceDelta = overview.sales_total - overview.expense_total
 
@@ -922,19 +976,43 @@ export function ShopDisplay() {
     }
 
     function removeCatalogItem(item: CatalogItem) {
-        if (!window.confirm(`Delete ${item.pname} from the catalog?`)) {
+        if (!window.confirm(`Delete ${item.pname} from catalog? Warning: this has a cascading effect and will also delete associated sales, debts, and settlements for this item. This cannot be undone.`)) {
             return
         }
         fetch(apiUrl(`/catalog/remove/${item.shop_id}/${item.product_id}`), {
             method: 'DELETE'
-        }).then((res) => {
-            if(res.status === 200) {
-                res.json().then(() => {
+        }).then(async (res) => {
+            const data = await res.json().catch(() => undefined)
+            if (res.status === 200) {
+                if (data?.message === "deleted") {
                     setCatalog((old) => {
                         return old.filter(c => c.product_id !== item.product_id)
                     })
                     loadOverview()
-                })
+                } else {
+                    alert(data?.error || data?.message || 'Delete catalog item failed')
+                }
+            } else {
+                alert(data?.error || 'Delete catalog item failed')
+            }
+        })
+    }
+
+    function clearStockItem(item: CatalogItem) {
+        if (!window.confirm(`Delete stock entry for ${item.pname}? This keeps the catalog item.`)) {
+            return
+        }
+
+        put(apiUrl(`/catalog/update/${item.id}`), {
+            stock_quantity: 0,
+            default_unit_price: Number(item.default_unit_price ?? 0)
+        }).then(async (res) => {
+            if (res.status === 200) {
+                loadCatalog()
+                loadOverview()
+            } else {
+                const json = await res.json().catch(() => undefined)
+                alert(json?.error || 'Stock update failed')
             }
         })
     }
@@ -950,8 +1028,10 @@ export function ShopDisplay() {
         }).then(async (res) => {
             const json = await res.json().catch(() => undefined)
             if (res.status === 200) {
-                setDebts((old) => old.filter((debtItem) => debtItem.id !== item.id))
-                setExpandedDebtId((old) => old === item.id ? null : old)
+                const deletedId = Number(item.id)
+                setDebts((old) => old.filter((debtItem) => Number(debtItem.id) !== deletedId))
+                setExpandedDebtId((old) => Number(old) === deletedId ? null : old)
+                loadDebts()
                 loadOverview()
             } else {
                 alert(json?.error || 'Debt deletion failed')
@@ -964,39 +1044,80 @@ export function ShopDisplay() {
             alert('Shop id missing. Please go back and open a shop.')
             return
         }
-        const name = catalogForm.name.trim()
         const stockQuantity = Math.max(0, parseInt(catalogForm.stock_quantity || '0', 10) || 0)
         const defaultUnitPrice = parseFloat(catalogForm.default_unit_price || '0')
-        if (!name) {
-            setCatalogStatus('Enter a product name')
-            return
-        }
-        if (!Number.isFinite(defaultUnitPrice) || defaultUnitPrice < 0) {
-            setCatalogStatus('Enter a valid default price')
-            return
-        }
-        setCatalogStatus('')
-        if (isEditingCatalog && editingCatalogProductId) {
+
+        if (activeModal === 'stock' && isEditingCatalog && editingCatalogProductId) {
             const currentCatalogEntry = catalog.find((item) => item.product_id === editingCatalogProductId)
             if (!currentCatalogEntry) {
                 setCatalogStatus('Catalog item not found')
                 return
             }
-            Promise.all([
-                put(apiUrl(`/product/update/${editingCatalogProductId}`), {
-                    name,
-                    description: catalogForm.description.trim()
-                }),
-                put(apiUrl(`/catalog/update/${currentCatalogEntry.id}`), {
-                    stock_quantity: stockQuantity,
-                    default_unit_price: defaultUnitPrice
-                })
-            ]).then(async ([productRes, catalogRes]) => {
-                const productData = await processResponse<EntityCreateResponse>(productRes, 'Update product failed', setCatalogStatus)
-                const catalogData = await processResponse<EntityCreateResponse>(catalogRes, 'Update stock failed', setCatalogStatus)
-                if (productData && catalogData) {
+            if (!Number.isFinite(defaultUnitPrice) || defaultUnitPrice < 0) {
+                setCatalogStatus('Enter a valid default price')
+                return
+            }
+            setCatalogStatus('')
+            put(apiUrl(`/catalog/update/${currentCatalogEntry.id}`), {
+                stock_quantity: stockQuantity,
+                default_unit_price: defaultUnitPrice
+            }).then(async (res) => {
+                const catalogData = await processResponse<EntityCreateResponse>(res, 'Update stock failed', setCatalogStatus)
+                if (catalogData) {
                     loadCatalog()
                     loadOverview()
+                    closeActionModal()
+                }
+            })
+            return
+        }
+
+        if (activeModal === 'stock' && !isEditingCatalog) {
+            const selectedCatalog = getCatalogItem(catalogForm.product_id)
+            if (!selectedCatalog) {
+                setCatalogStatus('Select a catalog item')
+                return
+            }
+            if (stockQuantity <= 0) {
+                setCatalogStatus('Enter stock quantity above 0')
+                return
+            }
+            const resolvedUnitPrice = Number.isFinite(defaultUnitPrice) && defaultUnitPrice >= 0
+                ? defaultUnitPrice
+                : Number(selectedCatalog.default_unit_price ?? 0)
+            if (!Number.isFinite(resolvedUnitPrice) || resolvedUnitPrice < 0) {
+                setCatalogStatus('Enter a valid default price')
+                return
+            }
+            setCatalogStatus('')
+            put(apiUrl(`/catalog/update/${selectedCatalog.id}`), {
+                stock_quantity: stockQuantity,
+                default_unit_price: resolvedUnitPrice
+            }).then(async (res) => {
+                const catalogData = await processResponse<EntityCreateResponse>(res, 'Add stock failed', setCatalogStatus)
+                if (catalogData) {
+                    loadCatalog()
+                    loadOverview()
+                    closeActionModal()
+                }
+            })
+            return
+        }
+
+        const name = catalogForm.name.trim()
+        if (!name) {
+            setCatalogStatus('Enter a product name')
+            return
+        }
+        setCatalogStatus('')
+        if (isEditingCatalog && editingCatalogProductId) {
+            put(apiUrl(`/product/update/${editingCatalogProductId}`), {
+                name,
+                description: catalogForm.description.trim()
+            }).then(async (productRes) => {
+                const productData = await processResponse<EntityCreateResponse>(productRes, 'Update product failed', setCatalogStatus)
+                if (productData) {
+                    loadCatalog()
                     closeActionModal()
                 }
             })
@@ -1006,20 +1127,55 @@ export function ShopDisplay() {
             name,
             description: catalogForm.description.trim()
         }).then(async (productRes) => {
-            const productData = await processResponse<EntityCreateResponse>(productRes, 'Create product failed', setCatalogStatus)
-            if (!productData?.id) return
+            const productPayload = await productRes.json().catch(() => undefined) as EntityCreateResponse | { error?: string } | undefined
+            let productData: EntityCreateResponse | undefined
+
+            if (productRes.ok && productPayload && typeof (productPayload as EntityCreateResponse).id === 'number') {
+                productData = productPayload as EntityCreateResponse
+            } else if (productPayload?.error) {
+                setCatalogStatus(productPayload.error)
+            } else {
+                setCatalogStatus('Create product failed')
+            }
+
+            if (!productData?.id) {
+                const duplicateName = (productPayload?.error ?? '').toLowerCase().includes('same name already exists')
+                if (duplicateName) {
+                    const allProductsRes = await fetch(apiUrl('/product/all'), { cache: 'no-store' })
+                    const allProducts = allProductsRes.ok
+                        ? await allProductsRes.json().catch(() => [])
+                        : []
+                    const existingProduct = Array.isArray(allProducts)
+                        ? (allProducts as ProductRow[]).find((row) => {
+                            const rowName = typeof row?.pname === 'string'
+                                ? row.pname.trim()
+                                : (typeof row?.name === 'string' ? row.name.trim() : '')
+                            return rowName.toLowerCase() === name.toLowerCase()
+                        })
+                        : undefined
+                    if (existingProduct?.id) {
+                        productData = { id: Number(existingProduct.id) }
+                        setCatalogStatus('')
+                    } else {
+                        setCatalogStatus('Product already exists but could not be matched. Try refreshing and adding again.')
+                        return
+                    }
+                } else {
+                    return
+                }
+            }
             post(apiUrl('/catalog/create'), {
                 shop_id: shopId,
                 product_id: productData.id,
-                stock_quantity: stockQuantity,
-                default_unit_price: defaultUnitPrice
-            }).then((res) => {
+                stock_quantity: 0,
+                default_unit_price: 0
+            }).then(async (res) => {
                 if(res.status === 200) {
                     loadCatalog()
-                    loadOverview()
                     closeActionModal()
                 } else {
-                    setCatalogStatus('Add to catalog failed')
+                    const json = await res.json().catch(() => undefined)
+                    setCatalogStatus(json?.error || 'Add to catalog failed')
                 }
             })
         })
@@ -1039,15 +1195,6 @@ export function ShopDisplay() {
             return
         }
         const selectedProductId = parseInt(saleForm.product_id, 10)
-        const existingSale = isEditingSale ? sales.find((record) => record.id === editingSaleId) : null
-        const restoreQty = existingSale && existingSale.product_id === selectedProductId
-            ? Number(existingSale.quantity ?? 0)
-            : 0
-        const availableStock = Number(getCatalogItem(saleForm.product_id)?.stock_quantity ?? 0) + restoreQty
-        if (!Number.isFinite(availableStock) || quantity > availableStock) {
-            setSaleStatus('Not enough stock for this sale')
-            return
-        }
         const payload = {
             shop_id: shopId,
             product_id: selectedProductId,
@@ -1160,55 +1307,67 @@ export function ShopDisplay() {
         { value: 'partial', label: 'Partially paid' },
         { value: 'outstanding', label: 'Outstanding' }
     ]
+    const detailHeaderTitle = selected === 0
+        ? 'Debt'
+        : selected === 1
+            ? 'Sales'
+            : selected === 2
+                ? 'Expenses'
+                : selected === 3
+                    ? 'Catalog'
+                    : selected === 4
+                        ? 'Stock'
+                        : 'Details'
 
     const topBar =  (
             <>
-                <div className="brand-strip overview-row sticky-brand-strip">
-                    <div className="app-badge">
-                        <div className="app-badge-mark">
-                            <i className="fa-solid fa-book app-badge-icon" aria-hidden="true" />
+                <div className="brand-strip overview-row sticky-brand-strip plain-header">
+                    <div className="plain-brand">
+                        <span className="plain-brand-icon-wrap" aria-hidden="true">
+                            <i className="fa-solid fa-book app-badge-icon plain-brand-icon" />
+                        </span>
+                        <div className="plain-brand-copy">
+                            <span className="plain-brand-label">Kitabu</span>
+                            <span className="plain-brand-shopline">{appBadgeShopName}</span>
                         </div>
-                        <div className="app-badge-copy">
-                            <span className="app-badge-label">Kitabu <span className="app-badge-motto">cha deni</span></span>
-                            <span className="app-badge-shopline">{appBadgeShopName}</span>
-                            <div className={`profit-panel ${performanceDelta >= 0 ? 'positive' : 'negative'}`}>
-                                <div className="profit-panel-top">
-                                    <div className="header-period-wrap">
-                                        <select
-                                            className="compact-select period-select header-period-select"
-                                            aria-label="Select period"
-                                            value={period}
-                                            onChange={(e) => setPeriod(e.target.value)}
-                                        >
-                                            <option value="day">Daily</option>
-                                            <option value="week">Weekly</option>
-                                            <option value="month">Monthly</option>
-                                            <option value="year">Yearly</option>
-                                            <option value="custom">Custom</option>
-                                        </select>
-                                        <i className="fa-solid fa-chevron-down period-select-caret" aria-hidden="true" />
-                                    </div>
-                                    <span className="header-clock" aria-label={`Current time ${headerTime}`}>
-                                        <i className="fa-regular fa-clock" aria-hidden="true" />
-                                        <span>{headerTime}</span>
-                                    </span>
-                                </div>
-                                <span className={`profit-value ${performanceDelta >= 0 ? 'positive' : 'negative'}`}>
-                                    {performanceDelta >= 0 ? '+' : '-'}{formatMoney(Math.abs(performanceDelta))}
-                                </span>
+                    </div>
+                    <div className={`profit-panel ${performanceDelta >= 0 ? 'positive' : 'negative'}`}>
+                        <div className="profit-panel-top">
+                            <div className="header-period-wrap">
+                                <select
+                                    className="compact-select period-select header-period-select"
+                                    aria-label="Select period"
+                                    value={homePeriod}
+                                    onChange={(e) => {
+                                        if (isPeriodOption(e.target.value)) {
+                                            setHomePeriod(e.target.value)
+                                        }
+                                    }}
+                                >
+                                    <option value="day">Daily</option>
+                                    <option value="week">Weekly</option>
+                                    <option value="month">Monthly</option>
+                                    <option value="year">Yearly</option>
+                                    <option value="custom">Custom</option>
+                                </select>
+                                <i className="fa-solid fa-chevron-down period-select-caret" aria-hidden="true" />
                             </div>
+                            <span className="profit-context">Returns</span>
+                            <span className={`profit-value ${performanceDelta >= 0 ? 'positive' : 'negative'}`}>
+                                {performanceDelta >= 0 ? '+' : '-'}{formatMoney(Math.abs(performanceDelta))}
+                            </span>
                         </div>
                     </div>
                 </div>
-                {period === 'custom' && (
+                {homePeriod === 'custom' && (
                     <div className="custom-range-grid overview-row">
                         <label className="field-group">
                             <span className="field-label">From</span>
-                            <input type="datetime-local" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} />
+                            <input type="datetime-local" value={homeCustomFrom} onChange={(e) => setHomeCustomFrom(e.target.value)} />
                         </label>
                         <label className="field-group">
                             <span className="field-label">To</span>
-                            <input type="datetime-local" value={customTo} onChange={(e) => setCustomTo(e.target.value)} />
+                            <input type="datetime-local" value={homeCustomTo} onChange={(e) => setHomeCustomTo(e.target.value)} />
                         </label>
                     </div>
                 )}
@@ -1261,7 +1420,7 @@ export function ShopDisplay() {
                             <button className="mini-add-button debt-add-button" type="button" onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); openModalForCreate('debt') }}>+</button>
                         </div>
                         <span className="stat-label">Debt</span>
-                        <span className="stat-value">KSh {formatCompactValue(overview.outstanding_total)}</span>
+                        <span className="stat-value">KSh {formatCompactValue(dashboardOutstandingTotal)}</span>
                         <div className="mini-records">
                             {recentDebts.length === 0 && <span className="mini-empty">No debts yet</span>}
                             {recentDebts.map((debtItem) => (
@@ -1301,16 +1460,6 @@ export function ShopDisplay() {
                         <span className="stat-label">Stock</span>
                         <span className="stat-value">KSh {formatCompactValue(stockValueToShow)}</span>
                         <div className="mini-records">
-                            <div className="mini-record">
-                                <span className="mini-record-title">Units on hand</span>
-                                <span className={`mini-status-pill ${lowStockCount > 0 ? 'warning' : 'safe'}`}>
-                                    {lowStockCount > 0 ? `${lowStockCount} low` : 'Healthy'}
-                                </span>
-                            </div>
-                            <div className="mini-record">
-                                <span className="mini-record-title">Defaults ready for forms</span>
-                                <span className="mini-record-meta">Tap to manage stock</span>
-                            </div>
                             <div className="mini-record">
                                 <span className="mini-record-title">Value in stock</span>
                                 <span className="mini-record-meta">{formatMoney(stockValueToShow)}</span>
@@ -1499,14 +1648,7 @@ export function ShopDisplay() {
             <button className="ghost-button" type="button" onClick={() => setSelected(-1)}>
                 Back
             </button>
-                <div className="app-badge detail-app-badge">
-                    <span className="app-badge-orbit" aria-hidden="true" />
-                    <i className="fa-solid fa-book app-badge-icon" aria-hidden="true" />
-                    <div className="app-badge-copy">
-                        <span className="app-badge-label">Kitabu · {appBadgeShopName}</span>
-                    <span className="app-badge-meta">cha deni</span>
-                    </div>
-                </div>
+            <div className="detail-nav-title">{detailHeaderTitle}</div>
             <button
                 className="primary-button detail-add-button"
                 type="button"
@@ -1525,6 +1667,7 @@ export function ShopDisplay() {
 
     const pageFooter = (
         <div className="page-footer">
+            <img className="footer-flag footer-flag-subtle" src={kenyaFlagGif} alt="" aria-hidden="true" />
             <div className="footer-copy footer-contact-label">Contact us</div>
             <div className="footer-copy">0741299069</div>
             <div className="footer-copy">Kikuyu, Thogoto</div>
@@ -1532,46 +1675,51 @@ export function ShopDisplay() {
             <button className="footer-logout-link" type="button" onClick={logout}>
                 Log out
             </button>
-            <img className="footer-flag" src={kenyaFlagGif} alt="Kenya flag" />
         </div>
     )
 
     const detailPeriodBar = (
-        <div className="period-strip detail-period-strip">
-            <select
-                className="compact-select period-select"
-                aria-label="Select period"
-                value={period}
-                onChange={(e) => setPeriod(e.target.value)}
-            >
-                <option value="day">Daily</option>
-                <option value="week">Weekly</option>
-                <option value="month">Monthly</option>
-                <option value="year">Yearly</option>
-                <option value="custom">Custom</option>
-            </select>
-            {period === 'custom' && (
-                <div className="custom-range-grid detail-period-grid">
-                    <label className="field-group">
-                        <span className="field-label">From</span>
-                        <input
-                            className="field-input"
-                            type="datetime-local"
-                            value={customFrom}
-                            onChange={(e) => setCustomFrom(e.target.value)}
-                        />
-                    </label>
-                    <label className="field-group">
-                        <span className="field-label">To</span>
-                        <input
-                            className="field-input"
-                            type="datetime-local"
-                            value={customTo}
-                            onChange={(e) => setCustomTo(e.target.value)}
-                        />
-                    </label>
-                </div>
-            )}
+        <div className="debt-inline-zone detail-period-anchor">
+            <div className="period-strip detail-period-strip">
+                <select
+                    className="compact-select period-select"
+                    aria-label="Select period"
+                    value={detailPeriod}
+                    onChange={(e) => {
+                        if (isPeriodOption(e.target.value)) {
+                            setDetailPeriod(e.target.value)
+                        }
+                    }}
+                >
+                    <option value="day">Daily</option>
+                    <option value="week">Weekly</option>
+                    <option value="month">Monthly</option>
+                    <option value="year">Yearly</option>
+                    <option value="custom">Custom</option>
+                </select>
+                {detailPeriod === 'custom' && (
+                    <div className="custom-range-grid detail-period-grid">
+                        <label className="field-group">
+                            <span className="field-label">From</span>
+                            <input
+                                className="field-input"
+                                type="datetime-local"
+                                value={detailCustomFrom}
+                                onChange={(e) => setDetailCustomFrom(e.target.value)}
+                            />
+                        </label>
+                        <label className="field-group">
+                            <span className="field-label">To</span>
+                            <input
+                                className="field-input"
+                                type="datetime-local"
+                                value={detailCustomTo}
+                                onChange={(e) => setDetailCustomTo(e.target.value)}
+                            />
+                        </label>
+                    </div>
+                )}
+            </div>
         </div>
     )
 
@@ -1715,48 +1863,87 @@ export function ShopDisplay() {
                             }
                         </p>
                         <form className="quick-entry-form" onSubmit={(e) => { e.preventDefault(); addToCatalog() }}>
-                            <label className="field-group span-2">
-                                <span className="field-label">Product name</span>
-                                <input
-                                    type="text"
-                                    placeholder="Face Towel"
-                                    value={catalogForm.name}
-                                    onChange={(e) => setCatalogForm((old) => ({ ...old, name: e.target.value }))}
-                                />
-                            </label>
-                            <label className="field-group span-2">
-                                <span className="field-label">Description</span>
-                                <input
-                                    type="text"
-                                    placeholder="Optional short description"
-                                    value={catalogForm.description}
-                                    onChange={(e) => setCatalogForm((old) => ({ ...old, description: e.target.value }))}
-                                />
-                            </label>
-                            <label className="field-group">
-                                <span className="field-label">Stock quantity</span>
-                                <input
-                                    type="number"
-                                    min="0"
-                                    step="1"
-                                    value={catalogForm.stock_quantity}
-                                    onChange={(e) => setCatalogForm((old) => ({ ...old, stock_quantity: e.target.value }))}
-                                />
-                            </label>
-                            <label className="field-group">
-                                <span className="field-label">Default price</span>
-                                <input
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    value={catalogForm.default_unit_price}
-                                    onChange={(e) => setCatalogForm((old) => ({ ...old, default_unit_price: e.target.value }))}
-                                />
-                            </label>
+                            {activeModal === 'catalog' ? (
+                                <>
+                                    <label className="field-group span-2">
+                                        <span className="field-label">Product name</span>
+                                        <input
+                                            type="text"
+                                            placeholder="Face Towel"
+                                            value={catalogForm.name}
+                                            onChange={(e) => setCatalogForm((old) => ({ ...old, name: e.target.value }))}
+                                        />
+                                    </label>
+                                    <label className="field-group span-2">
+                                        <span className="field-label">Description</span>
+                                        <input
+                                            type="text"
+                                            placeholder="Optional short description"
+                                            value={catalogForm.description}
+                                            onChange={(e) => setCatalogForm((old) => ({ ...old, description: e.target.value }))}
+                                        />
+                                    </label>
+                                </>
+                            ) : (
+                                <label className="field-group span-2">
+                                    <span className="field-label">Catalog item</span>
+                                    {isEditingCatalog ? (
+                                        <input type="text" value={catalogForm.name} readOnly />
+                                    ) : (
+                                        <select
+                                            value={catalogForm.product_id}
+                                            disabled={catalogLoaded && uniqueCatalog.length === 0}
+                                            onChange={(e) => {
+                                                const selectedCatalog = getCatalogItem(e.target.value)
+                                                setCatalogForm((old) => ({
+                                                    ...old,
+                                                    product_id: e.target.value,
+                                                    name: selectedCatalog?.pname ?? '',
+                                                    description: selectedCatalog?.description ?? '',
+                                                    default_unit_price: selectedCatalog?.default_unit_price ? String(selectedCatalog.default_unit_price) : old.default_unit_price
+                                                }))
+                                            }}
+                                        >
+                                            <option value="">Select catalog item</option>
+                                            {uniqueCatalog.map((c) => (
+                                                <option key={c.product_id} value={c.product_id}>{c.pname}</option>
+                                            ))}
+                                        </select>
+                                    )}
+                                </label>
+                            )}
+                            {activeModal === 'stock' && (
+                                <>
+                                    <label className="field-group">
+                                        <span className="field-label">Stock quantity</span>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            step="1"
+                                            value={catalogForm.stock_quantity}
+                                            onChange={(e) => setCatalogForm((old) => ({ ...old, stock_quantity: e.target.value }))}
+                                        />
+                                    </label>
+                                    <label className="field-group">
+                                        <span className="field-label">Default price</span>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            value={catalogForm.default_unit_price}
+                                            onChange={(e) => setCatalogForm((old) => ({ ...old, default_unit_price: e.target.value }))}
+                                        />
+                                    </label>
+                                </>
+                            )}
                             <div className="modal-actions span-2">
                                 <span className="status-text">{catalogStatus}</span>
                                 <button className="ghost-button" type="button" onClick={closeActionModal}>Cancel</button>
-                                <button className="primary-button" type="submit">
+                                <button
+                                    className="primary-button"
+                                    type="submit"
+                                    disabled={activeModal === 'stock' && !isEditingCatalog && uniqueCatalog.length === 0}
+                                >
                                     {activeModal === 'catalog'
                                         ? isEditingCatalog ? 'Save item' : 'Add to catalog'
                                         : isEditingCatalog ? 'Save stock' : 'Add stock'
@@ -1805,15 +1992,6 @@ export function ShopDisplay() {
             {welcomeToast}
             {detailNav}
             <div className="debt-inline-zone detail-intro detail-intro-debt">
-                <div className="inline-header">
-                    <div>
-                        <span className="detail-page-kicker">Debts detail</span>
-                        <h2>Debt ledger</h2>
-                        <p className="page-subtitle">
-                            Review outstanding balances, open a record to see payment history, and settle or forgive debt when needed.
-                        </p>
-                    </div>
-                </div>
                 <div className="panel-search">
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                         <path d="M15.5 14h-.8l-.3-.3a6.5 6.5 0 1 0-.7.7l.3.3v.8l4.8 4.8a1 1 0 0 0 1.4-1.4L15.5 14zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z" />
@@ -1826,14 +2004,11 @@ export function ShopDisplay() {
                     />
                 </div>
                 {catalogLoaded && catalog.length === 0 && (
-                    <div className="notice-card">
+                    <div className="notice-card notice-compact">
                         <div className="notice-title">Catalog required</div>
-                        <p className="notice-text">
-                            Add at least one catalog item before recording a debt.
-                            Switch to the Catalog tab to add items.
-                        </p>
+                        <p className="notice-text">Add one item to continue.</p>
                         <button className="notice-link" onClick={() => setSelected(3)}>
-                            Go to Catalog
+                            Open Catalog
                         </button>
                     </div>
                 )}
@@ -2066,13 +2241,6 @@ export function ShopDisplay() {
             {welcomeToast}
             {detailNav}
             <div className="debt-inline-zone detail-intro detail-intro-sales">
-                <div className="inline-header">
-                    <div>
-                        <span className="detail-page-kicker">Sales detail</span>
-                        <h2>Sales ledger</h2>
-                        <p className="page-subtitle">Record and review sales for the selected period.</p>
-                    </div>
-                </div>
                 <div className="panel-search">
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                         <path d="M15.5 14h-.8l-.3-.3a6.5 6.5 0 1 0-.7.7l.3.3v.8l4.8 4.8a1 1 0 0 0 1.4-1.4L15.5 14zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z" />
@@ -2134,13 +2302,6 @@ export function ShopDisplay() {
             {welcomeToast}
             {detailNav}
             <div className="debt-inline-zone detail-intro detail-intro-expenses">
-                <div className="inline-header">
-                    <div>
-                        <span className="detail-page-kicker">Expenses detail</span>
-                        <h2>Expense ledger</h2>
-                        <p className="page-subtitle">Track where the cash is going over the same selected period.</p>
-                    </div>
-                </div>
                 <div className="panel-search">
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                         <path d="M15.5 14h-.8l-.3-.3a6.5 6.5 0 1 0-.7.7l.3.3v.8l4.8 4.8a1 1 0 0 0 1.4-1.4L15.5 14zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z" />
@@ -2203,13 +2364,6 @@ export function ShopDisplay() {
             {welcomeToast}
             {detailNav}
             <div className="debt-inline-zone detail-intro detail-intro-catalog">
-                <div className="inline-header">
-                    <div>
-                        <span className="detail-page-kicker">Catalog detail</span>
-                        <h2>Catalog</h2>
-                        <p className="page-subtitle">Edit and remove the items available in your shop catalog.</p>
-                    </div>
-                </div>
                 <div className="panel-search">
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                         <path d="M15.5 14h-.8l-.3-.3a6.5 6.5 0 1 0-.7.7l.3.3v.8l4.8 4.8a1 1 0 0 0 1.4-1.4L15.5 14zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z" />
@@ -2222,11 +2376,11 @@ export function ShopDisplay() {
                     />
                 </div>
             </div>
+            {detailPeriodBar}
             <div className="panel glass detail-scroll-panel catalog-tone-panel">
                 <div className="panel-header">
                     <div>
                         <h2>Catalog items</h2>
-                        <p className="page-subtitle">Items available for credit.</p>
                     </div>
                 </div>
                 <div className="panel-list detail-scroll-list" ref={detailListRef} onScroll={handleDetailScroll}>
@@ -2270,13 +2424,6 @@ export function ShopDisplay() {
             {welcomeToast}
             {detailNav}
             <div className="debt-inline-zone detail-intro detail-intro-catalog">
-                <div className="inline-header">
-                    <div>
-                        <span className="detail-page-kicker">Stock detail</span>
-                        <h2>Stock on hand</h2>
-                        <p className="page-subtitle">Manage quantities and default prices used to prefill sales and debt entries.</p>
-                    </div>
-                </div>
                 <div className="panel-search">
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                         <path d="M15.5 14h-.8l-.3-.3a6.5 6.5 0 1 0-.7.7l.3.3v.8l4.8 4.8a1 1 0 0 0 1.4-1.4L15.5 14zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z" />
@@ -2289,6 +2436,7 @@ export function ShopDisplay() {
                     />
                 </div>
             </div>
+            {detailPeriodBar}
                 <div className="panel glass detail-scroll-panel catalog-tone-panel">
                     <div className="ledger-total">
                         <span className="ledger-label">Units in stock</span>
@@ -2312,7 +2460,7 @@ export function ShopDisplay() {
                                 <button className="ghost-button icon-button" type="button" onClick={() => openCatalogEditor(item, 'stock')} aria-label="Edit stock item" title="Edit stock item">
                                     <i className="fa-solid fa-pen-to-square" aria-hidden="true" />
                                 </button>
-                                <button className="ghost-button danger icon-button" type="button" onClick={() => removeCatalogItem(item)} aria-label="Delete stock item" title="Delete stock item">
+                                <button className="ghost-button danger icon-button" type="button" onClick={() => clearStockItem(item)} aria-label="Clear stock item" title="Clear stock item">
                                     <i className="fa-solid fa-trash-can" aria-hidden="true" />
                                 </button>
                             </div>

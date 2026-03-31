@@ -72,9 +72,10 @@ const [outstandingRows] = await connection.query(
                 FROM Settlement
                 GROUP BY debt_id
             ) s ON s.debt_id = d.id
-            WHERE d.creditor_shop_id = ?;
+            WHERE d.creditor_shop_id = ?
+              AND d.date_issued BETWEEN ? AND ?;
         `,
-        [shopId]
+        [shopId, fromTs, toTs]
     )
 
     const [stockValueRows] = await connection.query(

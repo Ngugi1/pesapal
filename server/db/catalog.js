@@ -68,29 +68,104 @@ module.exports.adjustStock = async function(connection, shopId, productId, delta
     const [header] = await connection.query(
         `
             UPDATE Catalog
-            SET stock_quantity = stock_quantity + ?
+            SET stock_quantity = GREATEST(stock_quantity + ?, 0)
             WHERE shop_id = ?
-              AND product_id = ?
-              AND stock_quantity + ? >= 0;
+              AND product_id = ?;
         `,
-        [Number(delta), Number(shopId), Number(productId), Number(delta)]
+        [Number(delta), Number(shopId), Number(productId)]
     )
 
     return header
 }
 
 module.exports.remove = async function(connection, info, res) {
-    console.log(info)
-    const [header] = await connection.query(
-        `
-            DELETE FROM Catalog WHERE shop_id=? AND product_id=?;
-        `,
-        [parseInt(info.shopid), parseInt(info.productid)]
-    )
-    if(header.affectedRows) {
-        res.send({"message": "deleted"})
-    }else {
-        res.send({"message": "Item does't exist"})
+    const shopId = parseInt(info.shopid, 10)
+    const productId = parseInt(info.productid, 10)
+
+    if (!Number.isFinite(shopId) || !Number.isFinite(productId)) {
+        util.error(res, "Catalog item delete failed", CatalogErrorCodes.CATALOG_UPDATE_FAILED)
+        return
     }
-    
+
+    const tx = typeof connection.getConnection === 'function'
+        ? await connection.getConnection()
+        : connection
+
+    try {
+        await tx.beginTransaction()
+
+        const [debtRows] = await tx.query(
+            `
+                SELECT id
+                FROM Debt
+                WHERE creditor_shop_id = ?
+                  AND product_id = ?;
+            `,
+            [shopId, productId]
+        )
+
+        const debtIds = (debtRows ?? []).map((row) => Number(row.id)).filter((id) => Number.isFinite(id))
+        let settlementsHeader = { affectedRows: 0 }
+        if (debtIds.length) {
+            const placeholders = debtIds.map(() => '?').join(', ')
+            const [result] = await tx.query(
+                `
+                    DELETE FROM Settlement
+                    WHERE debt_id IN (${placeholders});
+                `,
+                debtIds
+            )
+            settlementsHeader = result
+        }
+
+        const [debtHeader] = await tx.query(
+            `
+                DELETE FROM Debt
+                WHERE creditor_shop_id = ?
+                  AND product_id = ?;
+            `,
+            [shopId, productId]
+        )
+
+        const [salesHeader] = await tx.query(
+            `
+                DELETE FROM Sale
+                WHERE shop_id = ?
+                  AND product_id = ?;
+            `,
+            [shopId, productId]
+        )
+
+        const [catalogHeader] = await tx.query(
+            `
+                DELETE FROM Catalog
+                WHERE shop_id = ?
+                  AND product_id = ?;
+            `,
+            [shopId, productId]
+        )
+
+        if (!catalogHeader.affectedRows) {
+            await tx.rollback()
+            res.send({ "message": "Item does't exist" })
+            return
+        }
+
+        await tx.commit()
+        res.send({
+            "message": "deleted",
+            deleted_sales: Number(salesHeader?.affectedRows ?? 0),
+            deleted_debts: Number(debtHeader?.affectedRows ?? 0),
+            deleted_settlements: Number(settlementsHeader?.affectedRows ?? 0)
+        })
+    } catch (_error) {
+        if (typeof tx.rollback === 'function') {
+            try { await tx.rollback() } catch (_rollbackError) {}
+        }
+        util.error(res, "Catalog item delete failed", CatalogErrorCodes.CATALOG_UPDATE_FAILED)
+    } finally {
+        if (tx !== connection && typeof tx.release === 'function') {
+            tx.release()
+        }
+    }
 }

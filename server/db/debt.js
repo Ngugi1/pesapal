@@ -118,32 +118,61 @@ module.exports.forgive = async function(connection, debtId, res) {
 }
 
 module.exports.remove = async function(connection, debtId, res) {
-    const [settlements] = await connection.query(
-        `
-            SELECT COUNT(*) AS count
-            FROM Settlement
-            WHERE debt_id = ?;
-        `,
-        [debtId]
-    )
-
-    if ((settlements?.[0]?.count ?? 0) > 0) {
-        util.error(res, "Settled debts cannot be deleted", DebtErrorCodes.DEBT_DELETE_FAILED)
+    const parsedDebtId = Number(debtId)
+    if (!Number.isFinite(parsedDebtId) || parsedDebtId <= 0) {
+        util.error(res, "Debt item could not be deleted", DebtErrorCodes.DEBT_DELETE_FAILED)
         return
     }
 
-    const [header] = await connection.query(
-        `
-            DELETE FROM Debt
-            WHERE id = ?;
-        `,
-        [debtId]
-    )
+    const tx = typeof connection.getConnection === 'function'
+        ? await connection.getConnection()
+        : connection
 
-    if (header.affectedRows) {
-        res.send({ message: "deleted" })
-    } else {
+    try {
+        await tx.beginTransaction()
+
+        const [settlementsHeader] = await tx.query(
+            `
+                DELETE FROM Settlement
+                WHERE debt_id = ?;
+            `,
+            [parsedDebtId]
+        )
+
+        const [header] = await tx.query(
+            `
+                DELETE FROM Debt
+                WHERE id = ?;
+            `,
+            [parsedDebtId]
+        )
+
+        if (!header.affectedRows) {
+            await tx.rollback()
+            util.error(res, "Debt item could not be deleted", DebtErrorCodes.DEBT_DELETE_FAILED)
+            return
+        }
+
+        await tx.commit()
+        res.send({
+            message: "deleted",
+            deleted: {
+                debt: Number(header.affectedRows ?? 0),
+                settlement: Number(settlementsHeader.affectedRows ?? 0),
+                sale: 0,
+                expense: 0,
+                catalog: 0
+            }
+        })
+    } catch (_error) {
+        if (typeof tx.rollback === 'function') {
+            try { await tx.rollback() } catch (_rollbackError) {}
+        }
         util.error(res, "Debt item could not be deleted", DebtErrorCodes.DEBT_DELETE_FAILED)
+    } finally {
+        if (tx !== connection && typeof tx.release === 'function') {
+            tx.release()
+        }
     }
 }
 
