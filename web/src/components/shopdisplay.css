@@ -693,8 +693,8 @@
 }
 
 .footer-flag {
-  width: clamp(11px, 1.5vw, 14px);
-  height: clamp(11px, 1.5vw, 14px);
+  width: clamp(14px, 1.9vw, 18px);
+  height: clamp(14px, 1.9vw, 18px);
   object-fit: cover;
   display: inline-block;
   margin-top: 0;
