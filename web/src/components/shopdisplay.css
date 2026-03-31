@@ -679,6 +679,7 @@
   border: 1px solid rgba(255, 255, 255, 0.96);
   border-radius: var(--radius-subtle);
   padding: 12px;
+  position: relative;
   display: grid;
   gap: 8px;
   grid-template-rows: auto auto auto 1fr;
@@ -766,39 +767,54 @@
 }
 
 .mini-add-button {
-  width: 24px;
-  height: 24px;
+  width: 30px;
+  height: 30px;
   padding: 0;
   border-radius: 999px;
-  font-size: 0.9rem;
+  font-size: 0.96rem;
+  font-weight: 500;
   line-height: 1;
-  box-shadow: 0 6px 14px rgb(var(--accent-rgb) / 0.18);
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  box-shadow: 0 1px 3px rgb(var(--accent-rgb) / 0.1);
+  background: var(--mini-add-idle-bg, color-mix(in srgb, var(--accent) 52%, white 48%));
+  color: rgb(255 255 255 / 0.9);
+  transition: background 160ms ease, color 160ms ease, box-shadow 160ms ease;
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 2;
+}
+
+.mini-add-button:hover,
+.mini-add-button:focus-visible {
+  background: var(--mini-add-active-bg, var(--accent));
+  color: #fff;
+  box-shadow: 0 4px 10px rgb(var(--accent-rgb) / 0.18);
 }
 
 .sale-add-button {
-  background: #2f9c6d;
-  color: #fff;
+  --mini-add-idle-bg: color-mix(in srgb, #2f9c6d 52%, white 48%);
+  --mini-add-active-bg: #2f9c6d;
 }
 
 .expense-add-button {
-  background: #d95c4f;
-  color: #fff;
+  --mini-add-idle-bg: color-mix(in srgb, #d95c4f 52%, white 48%);
+  --mini-add-active-bg: #d95c4f;
 }
 
 .debt-add-button {
-  background: var(--accent);
-  color: #fff;
+  --mini-add-idle-bg: color-mix(in srgb, var(--accent) 52%, white 48%);
+  --mini-add-active-bg: var(--accent);
 }
 
 .catalog-add-button {
-  background: #d9ad00;
-  color: #fff;
+  --mini-add-idle-bg: color-mix(in srgb, #d9ad00 52%, white 48%);
+  --mini-add-active-bg: #d9ad00;
 }
 
 .stock-add-button {
-  background: #4369b8;
-  color: #fff;
+  --mini-add-idle-bg: color-mix(in srgb, #4369b8 52%, white 48%);
+  --mini-add-active-bg: #4369b8;
 }
 
 .mini-stat-icon.positive {
@@ -832,6 +848,11 @@
   align-content: start;
   min-height: 0;
   overflow: hidden;
+  padding-bottom: 34px;
+}
+
+.stock-card .mini-records {
+  padding-right: 40px;
 }
 
 .mini-record {
@@ -916,26 +937,28 @@
   height: 40px;
   padding: 0;
   border-radius: 999px;
+  font-weight: 500;
+  color: rgb(255 255 255 / 0.9);
 }
 
 .sales-detail-page .detail-add-button {
   background: #2f9c6d;
-  color: #fff;
+  color: rgb(255 255 255 / 0.9);
 }
 
 .expenses-detail-page .detail-add-button {
   background: #d95c4f;
-  color: #fff;
+  color: rgb(255 255 255 / 0.9);
 }
 
 .debt-detail-page .detail-add-button {
   background: var(--accent);
-  color: #fff;
+  color: rgb(255 255 255 / 0.9);
 }
 
 .catalog-detail-page .detail-add-button {
   background: #d9ad00;
-  color: #fff;
+  color: rgb(255 255 255 / 0.9);
 }
 
 .action-modal {
