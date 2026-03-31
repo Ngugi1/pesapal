@@ -90,6 +90,7 @@ type EntityCreateResponse = { id: number; error?: string }
 type ProductRow = { id: number; pname?: string; name?: string }
 type EditableModal = 'debt' | 'sale' | 'expense' | 'catalog' | 'stock'
 type PeriodOption = 'day' | 'week' | 'month' | 'year' | 'custom'
+type SetupMode = 'signup' | 'login'
 
 const PERIOD_STORAGE_KEY = 'kitabu-period'
 const PERIOD_FROM_STORAGE_KEY = 'kitabu-period-custom-from'
@@ -183,12 +184,11 @@ export function ShopDisplay() {
     const [editingCatalogProductId, setEditingCatalogProductId] = useState<number | null>(null)
     const [setupStatus, setSetupStatus] = useState('')
     const [setupData, setSetupData] = useState({
-        fname: '',
-        lname: '',
         phone: '',
         shop: ''
     })
-    const [setupMode, setSetupMode] = useState('signup')
+    const [setupMode, setSetupMode] = useState<SetupMode>('login')
+    const [showSetupModal, setShowSetupModal] = useState(false)
     const [welcomeMessage, setWelcomeMessage] = useState('')
     const [visibleCounts, setVisibleCounts] = useState({
         debt: 12,
@@ -201,7 +201,7 @@ export function ShopDisplay() {
     const previousSelectedRef = useRef<DetailSection>(-1)
     const shopId = shop?.shop_id ?? shop?.id
     const needsSetup = !shopId
-    const displayShop = shop ?? { sname: 'Your Shop' }
+    const displayShop = shop ?? { sname: 'Demo dashboard' }
     const [showScrollTop, setShowScrollTop] = useState(false)
     const currentYear = new Date().getFullYear()
     const isEditingDebt = editingDebtId !== null
@@ -345,6 +345,14 @@ export function ShopDisplay() {
         if (!sessionChecked) return
 
         const onPopState = (event: PopStateEvent) => {
+            if (showSetupModal) {
+                event.preventDefault?.()
+                setShowSetupModal(false)
+                setSetupStatus('')
+                window.history.pushState({ kitabu: true }, '')
+                return
+            }
+
             if (activeModal || settleTarget) {
                 event.preventDefault?.()
                 closeActionModal()
@@ -369,7 +377,7 @@ export function ShopDisplay() {
         window.history.pushState({ kitabu: true }, '')
         window.addEventListener('popstate', onPopState)
         return () => window.removeEventListener('popstate', onPopState)
-    }, [sessionChecked, selected, activeModal, settleTarget])
+    }, [sessionChecked, selected, activeModal, settleTarget, showSetupModal])
 
     const formatMoney = (value: number | string | undefined | null) => {
         const amount = Number(value) || 0
@@ -533,7 +541,34 @@ export function ShopDisplay() {
         resetCatalogForm()
     }
 
+    const openSetupDialog = (mode: SetupMode = 'login', statusMessage = '') => {
+        setSetupMode(mode)
+        setSetupStatus(statusMessage)
+        setShowSetupModal(true)
+    }
+
+    const closeSetupDialog = () => {
+        setShowSetupModal(false)
+        setSetupStatus('')
+    }
+
+    const requireSessionForAction = () => {
+        if (!needsSetup) return true
+        openSetupDialog('login', 'Log in or sign up to continue.')
+        return false
+    }
+
+    const openDetailSection = (section: DetailSection) => {
+        if (section === -1) {
+            setSelected(-1)
+            return
+        }
+        if (!requireSessionForAction()) return
+        setSelected(section)
+    }
+
     const openModalForCreate = (modal: EditableModal) => {
+        if (!requireSessionForAction()) return
         closeActionModal()
         if (modal === 'stock') {
             const firstCatalog = uniqueCatalog[0]
@@ -814,7 +849,38 @@ export function ShopDisplay() {
         return sum + Math.max(total - paid, 0)
     }, 0)
     const healthTone = overview.net_flow < 0 ? 'performance-down' : 'performance-up'
-    const performanceDelta = overview.sales_total - overview.expense_total
+    const demoNow = Math.floor(Date.now() / 1000)
+    const demoTileData = {
+        salesTotal: 32540,
+        expensesTotal: 11850,
+        debtTotal: 14600,
+        catalogCount: 27,
+        stockValue: 43200
+    }
+    const demoRecentSales: SaleRecord[] = [
+        { id: -1, shop_id: -1, product_name: 'Rice (2kg)', quantity: 3, unit_price: 320, total_amount: 960, sale_date: demoNow - 7200, notes: 'Morning rush' },
+        { id: -2, shop_id: -1, product_name: 'Cooking Oil', quantity: 5, unit_price: 410, total_amount: 2050, sale_date: demoNow - 5400, notes: 'Walk-in' },
+        { id: -3, shop_id: -1, product_name: 'Sugar (1kg)', quantity: 4, unit_price: 190, total_amount: 760, sale_date: demoNow - 3600, notes: 'Regular customer' }
+    ]
+    const demoRecentExpenses: ExpenseRecord[] = [
+        { id: -1, shop_id: -1, category: 'Restock transport', amount: 950, expense_date: demoNow - 4000, notes: 'Local supplier pickup' }
+    ]
+    const demoRecentDebts: DebtRecord[] = [
+        { id: -1, pname: 'Bread', quantity: 6, unit_price: 85, total_price: 510, debtor: 'Akinyi', comments: 'Takes daily' }
+    ]
+    const demoRecentCatalog: CatalogItem[] = [
+        { id: -1, shop_id: -1, product_id: -1, pname: 'Milk 500ml', description: 'Fast moving item', stock_quantity: 48, default_unit_price: 70 }
+    ]
+    const salesTotalForTiles = needsSetup ? demoTileData.salesTotal : overview.sales_total
+    const expenseTotalForTiles = needsSetup ? demoTileData.expensesTotal : overview.expense_total
+    const debtTotalForTiles = needsSetup ? demoTileData.debtTotal : dashboardOutstandingTotal
+    const catalogCountForTiles = needsSetup ? demoTileData.catalogCount : catalog.length
+    const stockValueForTiles = needsSetup ? demoTileData.stockValue : stockValueToShow
+    const recentSalesForTiles = needsSetup ? demoRecentSales : recentSales
+    const recentExpensesForTiles = needsSetup ? demoRecentExpenses : recentExpenses
+    const recentDebtsForTiles = needsSetup ? demoRecentDebts : recentDebts
+    const recentCatalogForTiles = needsSetup ? demoRecentCatalog : recentCatalog
+    const performanceDeltaToShow = salesTotalForTiles - expenseTotalForTiles
 
     const loadMore = (listKey: keyof typeof visibleCounts) => {
         setVisibleCounts((old) => ({
@@ -1295,9 +1361,12 @@ export function ShopDisplay() {
         closeActionModal()
         setDetailQuery('')
         setExpandedDebtId(null)
+        setShowSetupModal(false)
+        setSetupMode('login')
+        setSetupStatus('')
     }
 
-    const appBadgeShopName = displayShop.sname?.trim() || 'Your Shop'
+    const appBadgeShopName = displayShop.sname?.trim() || 'Demo dashboard'
     const showOverviewCards = selected === -1
     const debtFilterOptions = [
         { value: 'all', label: 'All' },
@@ -1331,7 +1400,7 @@ export function ShopDisplay() {
                             <span className="plain-brand-shopline">{appBadgeShopName}</span>
                         </div>
                     </div>
-                    <div className={`profit-panel ${performanceDelta >= 0 ? 'positive' : 'negative'}`}>
+                    <div className={`profit-panel ${performanceDeltaToShow >= 0 ? 'positive' : 'negative'}`}>
                         <div className="profit-panel-top">
                             <div className="header-period-wrap">
                                 <select
@@ -1353,12 +1422,19 @@ export function ShopDisplay() {
                                 <i className="fa-solid fa-chevron-down period-select-caret" aria-hidden="true" />
                             </div>
                             <span className="profit-context">Returns</span>
-                            <span className={`profit-value ${performanceDelta >= 0 ? 'positive' : 'negative'}`}>
-                                {performanceDelta >= 0 ? '+' : '-'}{formatMoney(Math.abs(performanceDelta))}
+                            <span className={`profit-value ${performanceDeltaToShow >= 0 ? 'positive' : 'negative'}`}>
+                                {performanceDeltaToShow >= 0 ? '+' : '-'}{formatMoney(Math.abs(performanceDeltaToShow))}
                             </span>
                         </div>
                     </div>
                 </div>
+                {needsSetup && (
+                    <div className="overview-row setup-notice-card">
+                        <button className="primary-button setup-trigger" type="button" onClick={() => openSetupDialog('login')}>
+                            Set up shop
+                        </button>
+                    </div>
+                )}
                 {homePeriod === 'custom' && (
                     <div className="custom-range-grid overview-row">
                         <label className="field-group">
@@ -1374,7 +1450,7 @@ export function ShopDisplay() {
                 {showOverviewCards && (
                 <>
                 <div className="overview-card-grid overview-row arranged-grid">
-                    <article className="mini-stat-card overview-tile sales-card tile-sales" onClick={() => setSelected(1)} role="button" tabIndex={0} onKeyDown={(e: KeyboardEvent<HTMLElement>) => { if (e.key === 'Enter' || e.key === ' ') setSelected(1) }}>
+                    <article className="mini-stat-card overview-tile sales-card tile-sales" onClick={() => openDetailSection(1)} role="button" tabIndex={0} onKeyDown={(e: KeyboardEvent<HTMLElement>) => { if (e.key === 'Enter' || e.key === ' ') openDetailSection(1) }}>
                         <div className="mini-stat-top">
                             <span className="mini-stat-icon positive">
                                 <i className="fa-solid fa-cash-register" aria-hidden="true" />
@@ -1382,10 +1458,10 @@ export function ShopDisplay() {
                             <button className="mini-add-button sale-add-button" type="button" onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); openModalForCreate('sale') }}>+</button>
                         </div>
                         <span className="stat-label">Sales</span>
-                        <span className="stat-value">KSh {formatCompactValue(overview.sales_total)}</span>
+                        <span className="stat-value">KSh {formatCompactValue(salesTotalForTiles)}</span>
                         <div className="mini-records">
-                            {recentSales.length === 0 && <span className="mini-empty">No sales yet</span>}
-                            {recentSales.map((sale) => (
+                            {recentSalesForTiles.length === 0 && <span className="mini-empty">No sales yet</span>}
+                            {recentSalesForTiles.map((sale) => (
                                 <div className="mini-record" key={`sale-${sale.id}`}>
                                     <span className="mini-record-title">{sale.product_name}</span>
                                     <span className="mini-record-meta">{formatCompactValue(sale.total_amount)}</span>
@@ -1393,7 +1469,7 @@ export function ShopDisplay() {
                             ))}
                         </div>
                     </article>
-                    <article className="mini-stat-card overview-tile expenses-card tile-expenses" onClick={() => setSelected(2)} role="button" tabIndex={0} onKeyDown={(e: KeyboardEvent<HTMLElement>) => { if (e.key === 'Enter' || e.key === ' ') setSelected(2) }}>
+                    <article className="mini-stat-card overview-tile expenses-card tile-expenses" onClick={() => openDetailSection(2)} role="button" tabIndex={0} onKeyDown={(e: KeyboardEvent<HTMLElement>) => { if (e.key === 'Enter' || e.key === ' ') openDetailSection(2) }}>
                         <div className="mini-stat-top">
                             <span className="mini-stat-icon warning">
                                 <i className="fa-solid fa-receipt" aria-hidden="true" />
@@ -1401,10 +1477,10 @@ export function ShopDisplay() {
                             <button className="mini-add-button expense-add-button" type="button" onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); openModalForCreate('expense') }}>+</button>
                         </div>
                         <span className="stat-label">Expenses</span>
-                        <span className="stat-value">KSh {formatCompactValue(overview.expense_total)}</span>
+                        <span className="stat-value">KSh {formatCompactValue(expenseTotalForTiles)}</span>
                         <div className="mini-records">
-                            {recentExpenses.length === 0 && <span className="mini-empty">No expenses yet</span>}
-                            {recentExpenses.map((expense) => (
+                            {recentExpensesForTiles.length === 0 && <span className="mini-empty">No expenses yet</span>}
+                            {recentExpensesForTiles.map((expense) => (
                                 <div className="mini-record" key={`expense-${expense.id}`}>
                                     <span className="mini-record-title">{expense.category}</span>
                                     <span className="mini-record-meta">{formatCompactValue(expense.amount)}</span>
@@ -1412,7 +1488,7 @@ export function ShopDisplay() {
                             ))}
                         </div>
                     </article>
-                    <article className="mini-stat-card overview-tile debt-card-overview tile-debt" onClick={() => setSelected(0)} role="button" tabIndex={0} onKeyDown={(e: KeyboardEvent<HTMLElement>) => { if (e.key === 'Enter' || e.key === ' ') setSelected(0) }}>
+                    <article className="mini-stat-card overview-tile debt-card-overview tile-debt" onClick={() => openDetailSection(0)} role="button" tabIndex={0} onKeyDown={(e: KeyboardEvent<HTMLElement>) => { if (e.key === 'Enter' || e.key === ' ') openDetailSection(0) }}>
                         <div className="mini-stat-top">
                             <span className="mini-stat-icon neutral">
                                 <i className="fa-solid fa-hand-holding-dollar" aria-hidden="true" />
@@ -1420,10 +1496,10 @@ export function ShopDisplay() {
                             <button className="mini-add-button debt-add-button" type="button" onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); openModalForCreate('debt') }}>+</button>
                         </div>
                         <span className="stat-label">Debt</span>
-                        <span className="stat-value">KSh {formatCompactValue(dashboardOutstandingTotal)}</span>
+                        <span className="stat-value">KSh {formatCompactValue(debtTotalForTiles)}</span>
                         <div className="mini-records">
-                            {recentDebts.length === 0 && <span className="mini-empty">No debts yet</span>}
-                            {recentDebts.map((debtItem) => (
+                            {recentDebtsForTiles.length === 0 && <span className="mini-empty">No debts yet</span>}
+                            {recentDebtsForTiles.map((debtItem) => (
                                 <div className="mini-record" key={`debt-${debtItem.id}`}>
                                     <span className="mini-record-title">{debtItem.debtor || debtItem.comments || debtItem.pname}</span>
                                     <span className="mini-record-meta">{formatCompactValue(debtItem.total_price)}</span>
@@ -1431,7 +1507,7 @@ export function ShopDisplay() {
                             ))}
                         </div>
                     </article>
-                    <article className="mini-stat-card overview-tile catalog-card tile-catalog" onClick={() => setSelected(3)} role="button" tabIndex={0} onKeyDown={(e: KeyboardEvent<HTMLElement>) => { if (e.key === 'Enter' || e.key === ' ') setSelected(3) }}>
+                    <article className="mini-stat-card overview-tile catalog-card tile-catalog" onClick={() => openDetailSection(3)} role="button" tabIndex={0} onKeyDown={(e: KeyboardEvent<HTMLElement>) => { if (e.key === 'Enter' || e.key === ' ') openDetailSection(3) }}>
                         <div className="mini-stat-top">
                             <span className="mini-stat-icon catalog">
                                 <i className="fa-solid fa-tags" aria-hidden="true" />
@@ -1439,10 +1515,10 @@ export function ShopDisplay() {
                             <button className="mini-add-button catalog-add-button" type="button" onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); openModalForCreate('catalog') }}>+</button>
                         </div>
                         <span className="stat-label">Catalog</span>
-                        <span className="stat-value">{catalog.length}</span>
+                        <span className="stat-value">{catalogCountForTiles}</span>
                         <div className="mini-records">
-                            {recentCatalog.length === 0 && <span className="mini-empty">No items yet</span>}
-                            {recentCatalog.map((item) => (
+                            {recentCatalogForTiles.length === 0 && <span className="mini-empty">No items yet</span>}
+                            {recentCatalogForTiles.map((item) => (
                                 <div className="mini-record" key={`catalog-${item.product_id}`}>
                                     <span className="mini-record-title">{item.pname}</span>
                                     <span className="mini-record-meta">{item.description || 'Catalog item'}</span>
@@ -1450,7 +1526,7 @@ export function ShopDisplay() {
                             ))}
                         </div>
                     </article>
-                    <article className="mini-stat-card overview-tile stock-card stock-card-center tile-stock" onClick={() => setSelected(4)} role="button" tabIndex={0} onKeyDown={(e: KeyboardEvent<HTMLElement>) => { if (e.key === 'Enter' || e.key === ' ') setSelected(4) }}>
+                    <article className="mini-stat-card overview-tile stock-card stock-card-center tile-stock" onClick={() => openDetailSection(4)} role="button" tabIndex={0} onKeyDown={(e: KeyboardEvent<HTMLElement>) => { if (e.key === 'Enter' || e.key === ' ') openDetailSection(4) }}>
                         <div className="mini-stat-top">
                             <span className="mini-stat-icon stock">
                                 <i className="fa-solid fa-boxes-stacked" aria-hidden="true" />
@@ -1458,11 +1534,11 @@ export function ShopDisplay() {
                             <button className="mini-add-button stock-add-button" type="button" onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); openModalForCreate('stock') }}>+</button>
                         </div>
                         <span className="stat-label">Stock</span>
-                        <span className="stat-value">KSh {formatCompactValue(stockValueToShow)}</span>
+                        <span className="stat-value">KSh {formatCompactValue(stockValueForTiles)}</span>
                         <div className="mini-records">
                             <div className="mini-record">
                                 <span className="mini-record-title">Value in stock</span>
-                                <span className="mini-record-meta">{formatMoney(stockValueToShow)}</span>
+                                <span className="mini-record-meta">{formatMoney(stockValueForTiles)}</span>
                             </div>
                         </div>
                     </article>
@@ -1498,46 +1574,62 @@ export function ShopDisplay() {
         })
     }
 
-    const setupModal = needsSetup ? (
-        <div className="modal-backdrop setup-backdrop">
-            <div className="modal-card setup-card">
-                <h3>Set up your shop</h3>
+    const setupModal = showSetupModal ? (
+        <div className="modal-backdrop setup-backdrop" onClick={closeSetupDialog}>
+            <div className="modal-card setup-card" onClick={(e: MouseEvent<HTMLDivElement>) => e.stopPropagation()}>
+                <h3>{setupMode === 'signup' ? 'Create your dashboard account' : 'Log in to your dashboard'}</h3>
                 <p className="page-subtitle">
-                    You can explore the dashboard now. Add your details to activate full operations.
+                    {setupMode === 'signup'
+                        ? 'Use your shop name and phone number to activate the dashboard.'
+                        : 'Enter your phone number to continue.'}
                 </p>
                 <form
                     className="setup-form"
                     onSubmit={async (e) => {
                         e.preventDefault()
                         setSetupStatus('')
+                        const normalizedPhone = setupData.phone.trim()
+
+                        if (!normalizedPhone) {
+                            setSetupStatus('Phone number is required')
+                            return
+                        }
+
                         if (setupMode === 'signup') {
+                            const shopName = setupData.shop.trim()
+                            if (!shopName) {
+                                setSetupStatus('Shop name is required')
+                                return
+                            }
+
                             const userRes = await post(apiUrl('/user/create'), {
-                                fname: setupData.fname,
-                                lname: setupData.lname,
-                                phone: setupData.phone
+                                fname: shopName,
+                                lname: '',
+                                phone: normalizedPhone
                             })
                             const userData = await processResponse<UserCreateResponse>(userRes, 'Sign up Failed', setSetupStatus)
                             if (userData) {
                                 const shopRes = await post(apiUrl('/shop/create'), {
                                     owner_id: userData.id,
-                                    name: setupData.shop
+                                    name: shopName
                                 })
                                 const shopData = await processResponse<ShopCreateResponse>(shopRes, 'Shop creation failed', setSetupStatus)
                                 if (shopData) {
                                     const session = {
                                         shop_id: shopData.id,
-                                        sname: setupData.shop,
-                                        fname: setupData.fname,
-                                        lname: setupData.lname,
-                                        phone: setupData.phone,
+                                        sname: shopName,
+                                        fname: shopName,
+                                        lname: '',
+                                        phone: normalizedPhone,
                                         id: userData.id
                                     }
                                     localStorage.setItem('kitabu_session', JSON.stringify(session))
                                     setShop(session)
+                                    closeSetupDialog()
                                 }
                             }
                         } else {
-                            const userRes = await fetch(apiUrl(`/user/phone/${encodeURIComponent(setupData.phone)}`))
+                            const userRes = await fetch(apiUrl(`/user/phone/${encodeURIComponent(normalizedPhone)}`))
                             if (userRes.status !== 200) {
                                 setSetupStatus('Account not found')
                                 return
@@ -1559,83 +1651,51 @@ export function ShopDisplay() {
                             }
                             localStorage.setItem('kitabu_session', JSON.stringify(session))
                             setShop(session)
+                            closeSetupDialog()
                         }
                     }}
                 >
-                    {setupMode === 'signup' ? (
-                        <>
-                            <label className="field-group">
-                                <span className="field-label">Shop name</span>
-                                <input
-                                    className="field-input"
-                                    type="text"
-                                    value={setupData.shop}
-                                    onChange={(e) => setSetupData((old) => ({ ...old, shop: e.target.value }))}
-                                    placeholder="Makini Shop"
-                                    required
-                                />
-                            </label>
-                            <label className="field-group">
-                                <span className="field-label">First name</span>
-                                <input
-                                    className="field-input"
-                                    type="text"
-                                    value={setupData.fname}
-                                    onChange={(e) => setSetupData((old) => ({ ...old, fname: e.target.value }))}
-                                    placeholder="Mike"
-                                    required
-                                />
-                            </label>
-                            <label className="field-group">
-                                <span className="field-label">Last name</span>
-                                <input
-                                    className="field-input"
-                                    type="text"
-                                    value={setupData.lname}
-                                    onChange={(e) => setSetupData((old) => ({ ...old, lname: e.target.value }))}
-                                    placeholder="Mills"
-                                    required
-                                />
-                            </label>
-                            <label className="field-group">
-                                <span className="field-label">Phone number</span>
-                                <input
-                                    className="field-input"
-                                    type="tel"
-                                    value={setupData.phone}
-                                    onChange={(e) => setSetupData((old) => ({ ...old, phone: e.target.value }))}
-                                    placeholder="0712 345 678"
-                                    required
-                                />
-                            </label>
-                        </>
-                    ) : (
+                    {setupMode === 'signup' && (
                         <label className="field-group">
-                            <span className="field-label">Phone number</span>
+                            <span className="field-label">Shop name</span>
                             <input
                                 className="field-input"
-                                type="tel"
-                                value={setupData.phone}
-                                onChange={(e) => setSetupData((old) => ({ ...old, phone: e.target.value }))}
-                                placeholder="0712 345 678"
+                                type="text"
+                                value={setupData.shop}
+                                onChange={(e) => setSetupData((old) => ({ ...old, shop: e.target.value }))}
+                                placeholder="Makini Shop"
                                 required
                             />
                         </label>
                     )}
-                    <div className="modal-actions">
+                    <label className="field-group">
+                        <span className="field-label">Phone number</span>
+                        <input
+                            className="field-input"
+                            type="tel"
+                            value={setupData.phone}
+                            onChange={(e) => setSetupData((old) => ({ ...old, phone: e.target.value }))}
+                            placeholder="0712 345 678"
+                            required
+                        />
+                    </label>
+                    <div className="modal-actions setup-actions">
+                        <button className="ghost-button" type="button" onClick={closeSetupDialog}>
+                            Cancel
+                        </button>
                         <button className="primary-button" type="submit">
-                            {setupMode === 'signup' ? 'Activate dashboard' : 'Log in'}
+                            {setupMode === 'signup' ? 'Create account' : 'Log in'}
                         </button>
                     </div>
                     <button
                         type="button"
-                        className="ghost-button"
+                        className="ghost-button setup-switch-button"
                         onClick={() => {
                             setSetupStatus('')
                             setSetupMode(setupMode === 'signup' ? 'login' : 'signup')
                         }}
                     >
-                        {setupMode === 'signup' ? 'Already have an account? Log in' : 'New here? Create an account'}
+                        {setupMode === 'signup' ? 'Already have an account? Log in' : 'Register'}
                     </button>
                     {setupStatus && <span className="status-text">{setupStatus}</span>}
                 </form>
@@ -2007,7 +2067,7 @@ export function ShopDisplay() {
                     <div className="notice-card notice-compact">
                         <div className="notice-title">Catalog required</div>
                         <p className="notice-text">Add one item to continue.</p>
-                        <button className="notice-link" onClick={() => setSelected(3)}>
+                        <button className="notice-link" onClick={() => openDetailSection(3)}>
                             Open Catalog
                         </button>
                     </div>

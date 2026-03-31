@@ -1498,6 +1498,15 @@
   text-decoration: underline;
 }
 
+.setup-notice-card {
+  display: grid;
+  gap: 10px;
+}
+
+.setup-trigger {
+  justify-self: start;
+}
+
 .notice-compact {
   display: flex;
   align-items: center;
@@ -1953,8 +1962,12 @@
   gap: 14px;
 }
 
-.setup-form .ghost-button {
+.setup-switch-button {
   justify-self: start;
+}
+
+.setup-actions {
+  align-items: center;
 }
 
 .modal-card h3 {
