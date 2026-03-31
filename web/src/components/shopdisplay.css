@@ -1,4 +1,5 @@
 .shop-page {
+  --radius-subtle: 6px;
   width: 100%;
   max-width: 1360px;
   margin: 0 auto;
@@ -676,7 +677,7 @@
 .mini-stat-card {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(239, 245, 255, 0.94));
   border: 1px solid rgba(255, 255, 255, 0.96);
-  border-radius: 0;
+  border-radius: var(--radius-subtle);
   padding: 12px;
   display: grid;
   gap: 8px;
@@ -1209,7 +1210,7 @@
 .detail-page,
 .detail-page.performance-down,
 .detail-page.performance-up {
-  border-radius: 0;
+  border-radius: var(--radius-subtle);
 }
 
 .detail-page :is(
@@ -1234,7 +1235,7 @@
   .inline-form input,
   .inline-form select
 ) {
-  border-radius: 0;
+  border-radius: var(--radius-subtle);
 }
 
 .detail-page .detail-add-button,
@@ -2241,7 +2242,7 @@
 
   .mini-stat-card {
     padding: 9px;
-    border-radius: 0;
+    border-radius: var(--radius-subtle);
     gap: 5px;
     min-height: 144px;
     max-height: 144px;
@@ -2503,7 +2504,7 @@
   .mini-stat-card {
     padding: 8px;
     gap: 5px;
-    border-radius: 0;
+    border-radius: var(--radius-subtle);
     min-height: 136px;
     max-height: 136px;
   }
