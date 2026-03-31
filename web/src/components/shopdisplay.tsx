@@ -191,7 +191,6 @@ export function ShopDisplay() {
     })
     const [setupMode, setSetupMode] = useState<SetupMode>('login')
     const [showSetupModal, setShowSetupModal] = useState(false)
-    const [welcomeMessage, setWelcomeMessage] = useState('')
     const [visibleCounts, setVisibleCounts] = useState({
         debt: 12,
         sale: 12,
@@ -336,14 +335,6 @@ export function ShopDisplay() {
     }, [])
 
     useEffect(() => {
-        if (!sessionChecked || !shop?.id) return
-        const firstName = shop.fname?.trim() || 'there'
-        setWelcomeMessage(`Welcome back, ${firstName}`)
-        const timer = window.setTimeout(() => setWelcomeMessage(''), 3200)
-        return () => window.clearTimeout(timer)
-    }, [sessionChecked, shop?.id])
-
-    useEffect(() => {
         if (!sessionChecked) return
 
         const onPopState = (event: PopStateEvent) => {
@@ -380,6 +371,11 @@ export function ShopDisplay() {
         window.addEventListener('popstate', onPopState)
         return () => window.removeEventListener('popstate', onPopState)
     }, [sessionChecked, selected, activeModal, settleTarget, showSetupModal])
+
+    useEffect(() => {
+        if (!sessionChecked || selected !== -1) return
+        window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+    }, [sessionChecked, selected])
 
     const formatMoney = (value: number | string | undefined | null) => {
         const amount = Number(value) || 0
@@ -1797,16 +1793,6 @@ export function ShopDisplay() {
         </div>
     )
 
-    const welcomeToast = welcomeMessage ? (
-        <div className="welcome-toast welcome-toast-bottom" role="status" aria-live="polite">
-            <i className="fa-solid fa-hand-sparkles" aria-hidden="true" />
-            <span>{welcomeMessage}</span>
-            <button type="button" className="welcome-dismiss" onClick={() => setWelcomeMessage('')} aria-label="Dismiss welcome message">
-                <i className="fa-solid fa-xmark" aria-hidden="true" />
-            </button>
-        </div>
-    ) : null
-
     const actionModal = activeModal ? (
         <div className="modal-backdrop" onClick={closeActionModal}>
             <div className={`modal-card action-modal modal-tone-${modalTone}`} onClick={(e: MouseEvent<HTMLDivElement>) => e.stopPropagation()}>
@@ -2047,7 +2033,6 @@ export function ShopDisplay() {
             {setupModal}
             {actionModal}
             {pageFooter}
-            {welcomeToast}
             {showScrollTop && (
                 <button
                     className="scroll-top"
@@ -2063,7 +2048,6 @@ export function ShopDisplay() {
         return <div className={`shop-page detail-page debt-detail-page ${healthTone}`}>
             {setupModal}
             {actionModal}
-            {welcomeToast}
             {detailNav}
             <div className="debt-inline-zone detail-intro detail-intro-debt">
                 <div className="panel-search">
@@ -2312,7 +2296,6 @@ export function ShopDisplay() {
         return <div className={`shop-page detail-page sales-detail-page ${healthTone}`}>
             {setupModal}
             {actionModal}
-            {welcomeToast}
             {detailNav}
             <div className="debt-inline-zone detail-intro detail-intro-sales">
                 <div className="panel-search">
@@ -2373,7 +2356,6 @@ export function ShopDisplay() {
         return <div className={`shop-page detail-page expenses-detail-page ${healthTone}`}>
             {setupModal}
             {actionModal}
-            {welcomeToast}
             {detailNav}
             <div className="debt-inline-zone detail-intro detail-intro-expenses">
                 <div className="panel-search">
@@ -2435,7 +2417,6 @@ export function ShopDisplay() {
         return <div className={`shop-page detail-page catalog-detail-page ${healthTone}`}>
             {setupModal}
             {actionModal}
-            {welcomeToast}
             {detailNav}
             <div className="debt-inline-zone detail-intro detail-intro-catalog">
                 <div className="panel-search">
@@ -2495,7 +2476,6 @@ export function ShopDisplay() {
         return <div className={`shop-page detail-page stock-detail-page ${healthTone}`}>
             {setupModal}
             {actionModal}
-            {welcomeToast}
             {detailNav}
             <div className="debt-inline-zone detail-intro detail-intro-stock">
                 <div className="panel-search">
@@ -2555,6 +2535,6 @@ export function ShopDisplay() {
             )}
         </div>
     }else{
-        return <div className={`shop-page home-page ${healthTone}`}>{topBar}{setupModal}{actionModal}{pageFooter}{welcomeToast}</div>
+        return <div className={`shop-page home-page ${healthTone}`}>{topBar}{setupModal}{actionModal}{pageFooter}</div>
     }
 }
