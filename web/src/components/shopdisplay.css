@@ -18,17 +18,24 @@
   overflow-x: clip;
 }
 
-.home-page.performance-down,
+.home-page.performance-down {
+  background: transparent;
+  border-radius: 0;
+}
+
 .detail-page.performance-down {
   background:
-    radial-gradient(1100px 720px at 18% 8%, rgba(255, 255, 255, 0.78), transparent 60%),
-    radial-gradient(900px 640px at 82% 0%, rgba(255, 232, 232, 0.52), transparent 56%),
-    radial-gradient(760px 520px at 50% 85%, rgba(255, 255, 255, 0.24), transparent 68%),
-    linear-gradient(160deg, #f4e7ea 0%, #ead9e3 42%, #d8dbe8 100%);
+    radial-gradient(1100px 720px at 18% 8%, rgba(255, 255, 255, 0.82), transparent 60%),
+    radial-gradient(900px 640px at 82% 0%, rgba(209, 226, 255, 0.58), transparent 56%),
+    radial-gradient(760px 520px at 50% 85%, rgba(255, 255, 255, 0.28), transparent 68%),
+    linear-gradient(160deg, #eef6ff 0%, #c9defe 45%, #97bef5 100%);
   border-radius: 32px;
 }
 
-.home-page.performance-up,
+.home-page.performance-up {
+  border-radius: 0;
+}
+
 .detail-page.performance-up {
   border-radius: 32px;
 }
@@ -310,6 +317,16 @@
   height: 36px;
   border-radius: 12px;
   font-size: 1.02rem;
+}
+
+.plain-brand-logo {
+  width: 80px;
+  height: 80px;
+  border-radius: 12px;
+  object-fit: contain;
+  display: block;
+  image-rendering: auto;
+  box-shadow: 0 6px 14px rgba(12, 38, 82, 0.15);
 }
 
 .plain-brand-copy {
@@ -2018,6 +2035,29 @@
   pointer-events: none;
 }
 
+.detail-page .list-item .icon-button {
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  color: #45607a;
+}
+
+.detail-page .list-item .icon-button:hover {
+  transform: none;
+  filter: none;
+  box-shadow: none !important;
+  background: rgba(255, 255, 255, 0.46) !important;
+}
+
+.detail-page .list-item .icon-button.danger {
+  color: #b43a3a;
+}
+
 .debt-actions {
   width: 100%;
   display: flex;
@@ -2340,10 +2380,16 @@
   }
 
   .plain-brand-icon {
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
     border-radius: 10px;
     font-size: 0.96rem;
+  }
+
+  .plain-brand-logo {
+    width: 64px;
+    height: 64px;
+    border-radius: 10px;
   }
 
   .plain-brand-copy {

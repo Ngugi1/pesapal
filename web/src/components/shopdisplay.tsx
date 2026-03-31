@@ -3,6 +3,7 @@ import type { FormEvent, KeyboardEvent, MouseEvent } from 'react'
 import {useLocation} from 'react-router-dom'
 import { apiUrl, post, processResponse, put } from './util'
 import kenyaFlagGif from '../assets/flag-of-kenya.gif'
+import shopLogo from '../assets/shop-icon.png'
 import './shopdisplay.css'
 
 type ShopSession = {
@@ -1406,7 +1407,7 @@ export function ShopDisplay() {
                 <div className="brand-strip overview-row sticky-brand-strip plain-header">
                     <div className="plain-brand">
                         <span className="plain-brand-icon-wrap" aria-hidden="true">
-                            <i className="fa-solid fa-book app-badge-icon plain-brand-icon" />
+                            <img src={shopLogo} alt="" className="plain-brand-logo" />
                         </span>
                         <div className="plain-brand-copy">
                             <span className="plain-brand-label">Kitabu</span>

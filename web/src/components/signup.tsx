@@ -3,6 +3,7 @@ import type { ChangeEvent, FormEvent } from "react"
 import {useNavigate} from 'react-router-dom'
 import { apiUrl, post, processResponse } from './util'
 import './signup.css'
+import shopLogo from '../assets/shop-icon.png'
 import dashboardShot from '../assets/dashboard-screenshot.svg'
 
 type AuthMode = 'login' | 'signup'
@@ -110,7 +111,7 @@ export function SignUp() {
                 <div className="signup-hero">
                     <div className="hero-copy-block">
                         <div className="hero-eyebrow brand-line">
-                            <i className="fa-solid fa-book brand-icon" aria-hidden="true" />
+                            <img src={shopLogo} alt="" className="brand-icon" aria-hidden="true" />
                             <span className="brand-name">Kitabu</span>
                         </div>
                         <h1 className="hero-title">Kitabu cha deni.</h1>
