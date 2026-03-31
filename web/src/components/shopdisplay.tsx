@@ -89,6 +89,7 @@ type ShopCreateResponse = { id: number; error?: string }
 type EntityCreateResponse = { id: number; error?: string }
 type ProductRow = { id: number; pname?: string; name?: string }
 type EditableModal = 'debt' | 'sale' | 'expense' | 'catalog' | 'stock'
+type ModalTone = 'debt' | 'sale' | 'expense' | 'catalog' | 'stock'
 type PeriodOption = 'day' | 'week' | 'month' | 'year' | 'custom'
 type SetupMode = 'signup' | 'login'
 
@@ -1387,6 +1388,18 @@ export function ShopDisplay() {
                     : selected === 4
                         ? 'Stock'
                         : 'Details'
+    const detailModalTone: ModalTone | null = selected === 0
+        ? 'debt'
+        : selected === 1
+            ? 'sale'
+            : selected === 2
+                ? 'expense'
+                : selected === 3
+                    ? 'catalog'
+                    : selected === 4
+                        ? 'stock'
+                        : null
+    const modalTone: ModalTone = detailModalTone ?? activeModal ?? 'debt'
 
     const topBar =  (
             <>
@@ -1795,7 +1808,7 @@ export function ShopDisplay() {
 
     const actionModal = activeModal ? (
         <div className="modal-backdrop" onClick={closeActionModal}>
-            <div className="modal-card action-modal" onClick={(e: MouseEvent<HTMLDivElement>) => e.stopPropagation()}>
+            <div className={`modal-card action-modal modal-tone-${modalTone}`} onClick={(e: MouseEvent<HTMLDivElement>) => e.stopPropagation()}>
                 {activeModal === 'debt' && (
                     <>
                         <h3>{activeModalTitle.debt}</h3>
@@ -2483,7 +2496,7 @@ export function ShopDisplay() {
             {actionModal}
             {welcomeToast}
             {detailNav}
-            <div className="debt-inline-zone detail-intro detail-intro-catalog">
+            <div className="debt-inline-zone detail-intro detail-intro-stock">
                 <div className="panel-search">
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                         <path d="M15.5 14h-.8l-.3-.3a6.5 6.5 0 1 0-.7.7l.3.3v.8l4.8 4.8a1 1 0 0 0 1.4-1.4L15.5 14zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z" />
@@ -2497,7 +2510,7 @@ export function ShopDisplay() {
                 </div>
             </div>
             {detailPeriodBar}
-                <div className="panel glass detail-scroll-panel catalog-tone-panel">
+                <div className="panel glass detail-scroll-panel stock-tone-panel">
                     <div className="ledger-total">
                         <span className="ledger-label">Units in stock</span>
                         <span className="ledger-value">{formatCompactValue(filteredStock.reduce((sum, item) => sum + (Number(item.stock_quantity) || 0), 0))}</span>
