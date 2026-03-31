@@ -779,10 +779,6 @@
   background: var(--mini-add-idle-bg, color-mix(in srgb, var(--accent) 52%, white 48%));
   color: rgb(255 255 255 / 0.9);
   transition: background 160ms ease, color 160ms ease, box-shadow 160ms ease;
-  position: absolute;
-  right: 10px;
-  bottom: 10px;
-  z-index: 2;
 }
 
 .mini-add-button:hover,
@@ -848,11 +844,6 @@
   align-content: start;
   min-height: 0;
   overflow: hidden;
-  padding-bottom: 34px;
-}
-
-.stock-card .mini-records {
-  padding-right: 40px;
 }
 
 .mini-record {
