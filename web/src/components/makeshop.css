@@ -1,0 +1,142 @@
+.makeshop-page {
+  width: 100%;
+  display: grid;
+  gap: 36px;
+}
+
+.makeshop-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.identity-block {
+  max-width: 520px;
+}
+
+.identity-block.with-logo {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 18px;
+  align-items: center;
+}
+
+.identity-text {
+  display: grid;
+  gap: 8px;
+  color: #f3f7ff;
+}
+
+.identity-text .page-title {
+  color: #f3f7ff;
+}
+
+.identity-text .hero-eyebrow,
+.identity-text .page-subtitle,
+.identity-text .owner-label,
+.identity-text .owner-phone {
+  color: #c6dbf2;
+}
+
+.shop-visual {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 22px;
+  padding: 12px;
+  box-shadow: 0 18px 40px rgb(var(--accent-rgb) / 0.18);
+  backdrop-filter: blur(12px);
+  max-width: 200px;
+}
+
+.shop-visual img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 16px;
+}
+
+.shop-visual.small-logo {
+  max-width: 120px;
+  padding: 10px;
+}
+
+.owner-inline {
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  align-items: center;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.owner-label {
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-weight: 800;
+  font-size: 0.7rem;
+}
+
+.owner-name {
+  font-family: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.owner-phone {
+  color: var(--muted);
+}
+
+.owner-block {
+  margin-top: 16px;
+  display: grid;
+  gap: 8px;
+}
+
+.owner-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.makeshop-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+
+.makeshop-grid.single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.makeshop-grid.lifted {
+  margin-top: -8px;
+}
+
+.makeshop-card {
+  background: rgba(255, 255, 255, 0.62);
+  border-radius: 28px;
+  padding: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 20px;
+  backdrop-filter: blur(16px);
+  color: var(--ink);
+}
+
+@media (max-width: 900px) {
+  .makeshop-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .makeshop-header {
+    flex-direction: column;
+  }
+}

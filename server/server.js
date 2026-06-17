@@ -1,5 +1,5 @@
 // Load environment variables
-require('dotenv').config(); 
+require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
 const cors = require('cors');
 const express = require('express');
 const {connector} = require('./db/connect')
@@ -9,23 +9,29 @@ const product = require('./db/product')
 const catalog = require('./db/catalog')
 const debt = require('./db/debt')
 const settle = require('./db/settle')
-let dbConnection = connector()
+const shopCustomer = require('./db/shopCustomer')
+const sale = require('./db/sale')
+const expense = require('./db/expense')
+const overview = require('./db/overview')
+const schema = require('./db/schema')
+let dbConnection = null
 // Init server
 let app = express()
 app.use(cors());
-app.port = 3003
+app.port = Number(process.env.PORT) || 3003
 // For json parsing
 app.use(express.json())
 
 
 async function startServer() {
-    // Keep one DB connection - a pool may be better in prod
+    // Use a pool so dropped MySQL sockets do not break every future request.
     try{
         dbConnection = await connector()
-        app.listen(app.port, async() => {
-            console.log(`Server running at http://localhost:${app.port}`);
+        await schema.ensure(dbConnection)
+        app.listen(app.port, '0.0.0.0', () => {
+            console.log(`Server running at http://0.0.0.0:${app.port}`);
         });
-    }catch (ex) {
+    }catch (err) {
         console.error('Fatal error during startup:', err);
         process.exit(1); // Non-zero is failure code - like return 0 in C
 
@@ -33,6 +39,16 @@ async function startServer() {
 }
 
 startServer()
+
+function parseDateRange(req) {
+    const now = Math.floor(Date.now() / 1000)
+    const from = Number(req.query.from)
+    const to = Number(req.query.to)
+    return {
+        from: Number.isFinite(from) && from > 0 ? Math.floor(from) : 0,
+        to: Number.isFinite(to) && to > 0 ? Math.floor(to) : now
+    }
+}
 
 // TODO:: Move routes to separate file
 app.get('/', (req, res) => {
@@ -48,6 +64,9 @@ app.post('/user/create', async (req, res) => {
 app.get('/users/all', async (req, res) => {
     await user.all(dbConnection, res)
 })
+app.get('/user/phone/:phone', async (req, res) => {
+    await user.findByPhone(dbConnection, req.params.phone, res)
+})
 
 // Create a shop
 app.post('/shop/create', async (req, res) => {
@@ -57,14 +76,31 @@ app.post('/shop/create', async (req, res) => {
 app.get('/shop/profile/:id', async (req, res) => {
     await shop.profile(dbConnection, req.params.id, res)
 })
+app.get('/shop/owner/:owner_id', async (req, res) => {
+    await shop.byOwner(dbConnection, req.params.owner_id, res)
+})
 
 app.get('/shop/profile/settled/:id', async (req, res)=> {
     await settle.settled(dbConnection, req.params.id, res)
+})
+// Shop customers
+app.get('/shop/customer/list/:shop_id', async (req, res) => {
+    await shopCustomer.list(dbConnection, req.params.shop_id, res)
+})
+app.post('/shop/customer/add', async (req, res) => {
+    await shopCustomer.add(dbConnection, req.body, res)
+})
+app.delete('/shop/customer/remove', async (req, res) => {
+    await shopCustomer.remove(dbConnection, req.body, res)
 })
 
 // Create a product
 app.post('/product/create', async (req, res) => {
     await product.create(dbConnection, req.body, res)
+})
+
+app.put('/product/update/:id', async (req, res) => {
+    await product.update(dbConnection, req.params.id, req.body, res)
 })
 
 app.get('/product/all', async (_req, res) => {
@@ -74,6 +110,10 @@ app.get('/product/all', async (_req, res) => {
 // Create a catalog for a shop
 app.post('/catalog/create', async (req, res) => {
     await catalog.create(dbConnection, req.body, res)
+})
+
+app.put('/catalog/update/:id', async (req, res) => {
+    await catalog.update(dbConnection, req.params.id, req.body, res)
 })
 
 
@@ -90,13 +130,32 @@ app.get('/catalog/shop/:id', async (req, res) => {
 
 // Give debt
 app.get('/debt/getall/:shop_id', async (req, res) => {
-    await debt.getAll(dbConnection, req.params.shop_id, res)
+    const range = parseDateRange(req)
+    await debt.getAll(dbConnection, req.params.shop_id, range.from, range.to, res)
+})
+// Debt stats
+app.get('/debt/stats/:shop_id', async (req, res) => {
+    const range = parseDateRange(req)
+    await debt.stats(dbConnection, req.params.shop_id, range.from, range.to, res)
+})
+// Debt list (all statuses)
+app.get('/debt/list/:shop_id', async (req, res) => {
+    const range = parseDateRange(req)
+    await debt.listAll(dbConnection, req.params.shop_id, range.from, range.to, res)
 })
 
 
 // Give debt
 app.post('/debt/create', async (req, res) => {
     await debt.create(dbConnection, req.body, res)
+})
+
+app.put('/debt/update/:id', async (req, res) => {
+    await debt.update(dbConnection, req.params.id, req.body, res)
+})
+
+app.delete('/debt/remove/:id', async (req, res) => {
+    await debt.remove(dbConnection, req.params.id, res)
 })
 
 // Forgive debt
@@ -109,3 +168,41 @@ app.put('/debt/settle', async (req, res) => {
     await settle.create(dbConnection, req.body, res)
 })
 
+app.post('/sale/create', async (req, res) => {
+    await sale.create(dbConnection, req.body, res)
+})
+
+app.put('/sale/update/:id', async (req, res) => {
+    await sale.update(dbConnection, req.params.id, req.body, res)
+})
+
+app.get('/sale/list/:shop_id', async (req, res) => {
+    const range = parseDateRange(req)
+    await sale.list(dbConnection, req.params.shop_id, range.from, range.to, res)
+})
+
+app.delete('/sale/remove/:id', async (req, res) => {
+    await sale.remove(dbConnection, req.params.id, res)
+})
+
+app.post('/expense/create', async (req, res) => {
+    await expense.create(dbConnection, req.body, res)
+})
+
+app.put('/expense/update/:id', async (req, res) => {
+    await expense.update(dbConnection, req.params.id, req.body, res)
+})
+
+app.get('/expense/list/:shop_id', async (req, res) => {
+    const range = parseDateRange(req)
+    await expense.list(dbConnection, req.params.shop_id, range.from, range.to, res)
+})
+
+app.delete('/expense/remove/:id', async (req, res) => {
+    await expense.remove(dbConnection, req.params.id, res)
+})
+
+app.get('/overview/:shop_id', async (req, res) => {
+    const range = parseDateRange(req)
+    await overview.summary(dbConnection, req.params.shop_id, range.from, range.to, res)
+})

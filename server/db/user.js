@@ -22,9 +22,29 @@ module.exports.create = async function(connection, user, res) {
             res.send({"error": 'No user details provided', code: UserErrorCodes.USER_DATA_NOT_PROVIDED})
         }
     }else {
-        res.send({"error": 'User already exists', code: UserErrorCodes.USER_EXISTS})
+        const [rows] = await connection.query(
+            `SELECT id, fname, lname, phone FROM User WHERE phone = ? LIMIT 1`,
+            [user.phone]
+        )
+        if (rows && rows.length) {
+            res.send({ id: rows[0].id, existing: true })
+        } else {
+            res.send({error: 'User already exists', code: UserErrorCodes.USER_EXISTS})
+        }
     }
    
+}
+
+module.exports.findByPhone = async function(connection, phone, res) {
+    const [rows] = await connection.query(
+        `SELECT id, fname, lname, phone FROM User WHERE phone = ? LIMIT 1`,
+        [phone]
+    )
+    if (rows && rows.length) {
+        res.send(rows[0])
+    } else {
+        res.status(404).send({ error: 'User not found' })
+    }
 }
 
 module.exports.all = async function (connection, res) {
@@ -36,4 +56,3 @@ module.exports.all = async function (connection, res) {
         res.send(results)
     }
 }
-

@@ -31,6 +31,8 @@ DESC Product;
 CREATE TABLE Catalog(id INT PRIMARY KEY AUTO_INCREMENT, 
                         shop_id INT NOT NULL, 
                         product_id INT NOT NULL,
+                        stock_quantity INT NOT NULL DEFAULT 0,
+                        default_unit_price DECIMAL(10,2) NOT NULL DEFAULT 0,
                         FOREIGN KEY (shop_id) REFERENCES Shop(id),
                         FOREIGN KEY (product_id) REFERENCES Product(id),
                         INDEX idx_shop_product_ids (shop_id, product_id), -- composite index
@@ -41,10 +43,11 @@ DESC Catalog;
 -- To extend credit to users, make schema for debt table --- 
 CREATE TABLE Debt(id INT PRIMARY KEY AUTO_INCREMENT, 
                     creditor_shop_id INT NOT NULL, 
-                    debtor_user_id INT NOT NULL, 
+                    debtor_user_id INT DEFAULT NULL, 
                     product_id INT NOT NULL, 
                     quantity INT NOT NULL, 
                     unit_price DECIMAL(10,2) NOT NULL,
+                    comments TEXT NOT NULL,
                     total_price DECIMAL(10, 2) AS (unit_price*quantity) STORED NOT NULL,
                     date_issued BIGINT NOT NULL  DEFAULT (UNIX_TIMESTAMP()),
                     forgiven BOOLEAN NOT NULL DEFAULT FALSE,
@@ -64,6 +67,44 @@ CREATE TABLE Settlement(id INT PRIMARY KEY AUTO_INCREMENT,
                             settlement_date BIGINT NOT NULL DEFAULT (UNIX_TIMESTAMP()),
                             is_full_settlement BOOLEAN NOT NULL,
                             comments TEXT NOT NULL);
+
+-- Record over-the-counter sales ---
+CREATE TABLE Sale(
+                    id INT PRIMARY KEY AUTO_INCREMENT,
+                    shop_id INT NOT NULL,
+                    product_id INT DEFAULT NULL,
+                    quantity INT NOT NULL DEFAULT 1,
+                    unit_price DECIMAL(10,2) NOT NULL,
+                    total_amount DECIMAL(10,2) AS (quantity * unit_price) STORED NOT NULL,
+                    sale_date BIGINT NOT NULL DEFAULT (UNIX_TIMESTAMP()),
+                    notes TEXT NOT NULL,
+                    FOREIGN KEY (shop_id) REFERENCES Shop(id),
+                    FOREIGN KEY (product_id) REFERENCES Product(id),
+                    INDEX idx_sale_shop_date (shop_id, sale_date)
+                );
+
+-- Record shop expenses ---
+CREATE TABLE Expense(
+                        id INT PRIMARY KEY AUTO_INCREMENT,
+                        shop_id INT NOT NULL,
+                        category VARCHAR(100) NOT NULL,
+                        amount DECIMAL(10,2) NOT NULL,
+                        expense_date BIGINT NOT NULL DEFAULT (UNIX_TIMESTAMP()),
+                        notes TEXT NOT NULL,
+                        FOREIGN KEY (shop_id) REFERENCES Shop(id),
+                        INDEX idx_expense_shop_date (shop_id, expense_date)
+                    );
+
+-- Link customers to shops ---
+CREATE TABLE ShopCustomer(
+                            id INT PRIMARY KEY AUTO_INCREMENT,
+                            shop_id INT NOT NULL,
+                            user_id INT NOT NULL,
+                            date_created BIGINT NOT NULL DEFAULT (UNIX_TIMESTAMP()),
+                            UNIQUE KEY uniq_shop_user (shop_id, user_id),
+                            FOREIGN KEY (shop_id) REFERENCES Shop(id),
+                            FOREIGN KEY (user_id) REFERENCES User(id)
+                        );
 
 
 
@@ -88,28 +129,45 @@ VALUES  ("Winkel Shop", 1),
         ("Hakuna Deni Shop", 2);
 
 -- extend credit to customers
-INSERT INTO Debt(creditor_shop_id, debtor_user_id, product_id, quantity, unit_price) 
-VALUES  (1, 2, 2, 2, 10),
-        (1, 2, 3, 1, 20),
-        (2, 3, 2, 2, 30),
-        (2, 3, 3, 1, 40);
+INSERT INTO Debt(creditor_shop_id, debtor_user_id, product_id, quantity, unit_price, comments) 
+VALUES  (1, 2, 2, 2, 10, "Peter Njenga 0721234568"),
+        (1, 2, 3, 1, 20, "Peter Njenga 0721234568"),
+        (2, 3, 2, 2, 30, "One Man 0712345566"),
+        (2, 3, 3, 1, 40, "One Man 0712345566");
 
 -- Build catalog for our only available shop (id = 1) ---
-INSERT INTO Catalog (shop_id, product_id) 
-VALUES  (1, 1),
-        (1, 2),
-        (1, 3),
-        (1, 4),
-        (2, 1),
-        (2, 2),
-        (2, 3),
-        (2, 4);
+INSERT INTO Catalog (shop_id, product_id, stock_quantity, default_unit_price) 
+VALUES  (1, 1, 20, 12),
+        (1, 2, 16, 18),
+        (1, 3, 12, 25),
+        (1, 4, 8, 30),
+        (2, 1, 24, 14),
+        (2, 2, 18, 22),
+        (2, 3, 10, 25),
+        (2, 4, 6, 35);
+
+-- Link existing users as customers for shops ---
+INSERT INTO ShopCustomer (shop_id, user_id)
+VALUES (1, 2),
+       (1, 3),
+       (2, 1),
+       (2, 3);
 -- Lets Settle some debts, partially and fully
 INSERT INTO Settlement(debt_id, amount, is_full_settlement, comments) 
 VALUES  (1, 20, TRUE, "Partial payment"),
         (2, 20, TRUE, "Partial payment"),
         (3, 5, FALSE, "Partial payment"),
         (4, 15, FALSE, "Partial payment");
+
+INSERT INTO Sale(shop_id, product_id, quantity, unit_price, sale_date, notes)
+VALUES  (1, 1, 3, 12, UNIX_TIMESTAMP() - 3600, "Morning towel sales"),
+        (1, 2, 1, 18, UNIX_TIMESTAMP() - 1800, "Walk-in customer"),
+        (2, 3, 2, 25, UNIX_TIMESTAMP() - 7200, "Counter sale");
+
+INSERT INTO Expense(shop_id, category, amount, expense_date, notes)
+VALUES  (1, "Stock", 45, UNIX_TIMESTAMP() - 5400, "Restocked face towels"),
+        (1, "Transport", 10, UNIX_TIMESTAMP() - 2700, "Market trip"),
+        (2, "Utilities", 20, UNIX_TIMESTAMP() - 3600, "Power tokens");
 
 -- The Database is populated! 
 -- Let us make some queries
@@ -191,13 +249,6 @@ WHERE id = 5; -- Parameterize this in nodejs
 
 -- Lets remove a catalog item that is no longer stocked by a shop
 DELETE FROM Catalog WHERE shop_id=1 AND product_id=2;
-
-
-
-
-
-
-
 
 
 

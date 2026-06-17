@@ -56,4 +56,15 @@ module.exports.profile = async function(connection, shop_id, res) {
     }
 }
 
+module.exports.byOwner = async function(connection, ownerId, res) {
+    const [rows] = await connection.query(
+        `SELECT id, sname, shop_owner FROM Shop WHERE shop_owner = ? LIMIT 1`,
+        [parseInt(ownerId)]
+    )
+    if (rows && rows.length) {
+        res.json(rows[0])
+    } else {
+        res.status(404).json({ error: 'Shop not found' })
+    }
+}
 

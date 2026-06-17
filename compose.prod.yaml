@@ -1,0 +1,54 @@
+services:
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+      args:
+        VITE_APP_BASE_PATH: /kitabu/
+        VITE_APP_START_URL: http://158.220.86.151/kitabu
+    restart: unless-stopped
+    depends_on:
+      - server
+    networks:
+      - default
+      - autogarage-network    
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    environment:
+      PORT: 3003
+      MYSQL_HOST: db
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - default
+      - autogarage-network
+  db:
+    image: mysql:9.6
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    environment:
+      MYSQL_ROOT_HOST: '%'
+    healthcheck:
+      # Use TCP + explicit user to avoid localhost socket auth quirks
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 15s
+      retries: 30
+      start_period: 30s
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./docker-entrypoint-initdb.d/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+volumes:
+  mysql-data:
+networks:
+  autogarage-network:
+    external: true
+    name: autogarage_autogarage-network

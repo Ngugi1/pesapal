@@ -29,16 +29,86 @@ MYSQL_HOST=db
 - The whole set of available endpoints is published [here](https://llms55.postman.co/workspace/LLMs~fdcf35b6-92d5-4b64-917e-f4b1678b3d0d/collection/931606-8f60028d-291f-4d71-8e95-b9fcdece8f86?action=share&creator=931606)
 - Alternatively, open `./server/server.js` to see the complete set of endpoints 
 
+## Linux deployment notes
+- The API server now reads `PORT` and defaults to `3003`.
+- The API server now reads database settings from env and supports both `MYSQL_USER` / `MYSQL_PASSWORD` and the previous `MYSQL_ROOT_USER` / `MYSQL_ROOT_PASSWORD`.
+- The web app defaults to calling `/api` from the browser instead of hardcoding `hostname:3003`.
+- For local Vite development outside Docker, `/api` is proxied to `http://127.0.0.1:3003`.
+- For Docker development, the `web` service sets `VITE_API_PROXY_TARGET=http://server:3003`.
+- For production with Docker, the `web` container serves the built static app with Nginx and proxies `/api/*` to the `server` container.
+- For production on a Linux server with an external reverse proxy, point the proxy at the `web` container rather than Vite. Example with Nginx:
+
+```nginx
+location /api/ {
+    proxy_pass http://127.0.0.1:3003/;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+
+- If you do not want to use a reverse proxy path, set `VITE_API_BASE_URL` at build time to your public API URL.
+
+## Production Docker on a VPS
+- Use `compose.yaml` for local development only.
+- Use `compose.prod.yaml` for server deployment.
+- The production web image no longer runs Vite. It builds the React app and serves the generated `dist` files from Nginx.
+- The production server image no longer runs `nodemon`. It runs `npm run start`.
+- The service worker is disabled for now to avoid stale deploys being cached by browsers.
+- Production MySQL data lives in the Docker named volume `mysql-data`. That protects data from container restarts, but it is not a backup.
+
+### First deployment flow
+1. Copy the repo to the server.
+2. Create or update `.env` with production secrets.
+3. Build and start the production stack:
+   `docker compose -f compose.prod.yaml up -d --build`
+4. Verify locally on the server:
+   `curl http://127.0.0.1:8080`
+5. Point your existing gateway / Nginx proxy to `http://127.0.0.1:8080`.
+
+### Notes for servers with an existing gateway
+- If your Contabo server already has Nginx, a gateway, or another reverse proxy running, do not expose Vite or the Node API publicly.
+- Route your public domain to the `web` container only.
+- The `web` container already proxies `/api/*` internally to the `server` container.
+- If your gateway prefers Docker networks instead of host ports, you can remove `8080:80` from `compose.prod.yaml` and attach both stacks to the same external Docker network.
+
+### Updating a live deployment
+- Pull the latest code on the server.
+- Rebuild and restart:
+  `docker compose -f compose.prod.yaml up -d --build`
+- Confirm health:
+  `docker compose -f compose.prod.yaml ps`
+
+## Database backups outside Docker
+- Use `./scripts/backup-db.sh` to create a compressed MySQL dump on the host machine outside the repo by default, at `~/kitabu-backups/mysql/`.
+- The script reads `.env`, connects to the running `db` service from `compose.prod.yaml`, writes a timestamped `.sql.gz` file, and deletes backups older than 14 days by default.
+- Make the script executable once:
+  `chmod +x ./scripts/backup-db.sh`
+- Run it manually:
+  `./scripts/backup-db.sh`
+- Keep backups longer by overriding retention:
+  `RETENTION_DAYS=30 ./scripts/backup-db.sh`
+- Store backups in a different folder if you want them on another disk:
+  `BACKUP_DIR=/srv/kitabu-backups ./scripts/backup-db.sh`
+
+### Automate backups with cron
+Use the server's crontab so backups happen even when you forget:
+
+```cron
+0 */6 * * * cd /path/to/pesapal && /bin/bash ./scripts/backup-db.sh >> /var/log/kitabu-backup.log 2>&1
+```
+
+- The example above runs every 6 hours.
+- A good minimum for real customers is every night; every 6 hours is safer.
+- For stronger protection, sync the generated backup folder to a second machine or cloud bucket as a separate step.
+
 ## The front-end
 The visual web application can be accessed via link: http://localhost:5173/
 
 ## Notes
 Please note that due to limited time, some areas of the app especially on the front-end were done in a hurry and thus the quality may not be as great.
-
-
-
-
-
 
 
 
